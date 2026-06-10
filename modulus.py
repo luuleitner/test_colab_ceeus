@@ -50,8 +50,8 @@ def _v(leaf):
 
 
 CFG = load_config()
-C_SOUND  = _v(CFG["physics"]["speed_of_sound_ms"])   # m/s soft-tissue speed of sound
-N_CYCLES = _v(CFG["physics"]["pulse_cycles"])        # excitation pulse length
+C_SOUND  = _v(CFG["medium"]["speed_of_sound_ms"])    # m/s soft-tissue speed of sound
+N_CYCLES = _v(CFG["excitation"]["pulse_cycles"])     # default excitation pulse length
 
 
 # ── Acquisition context (Acq): fields filled as it passes through the boards
@@ -75,32 +75,37 @@ class Acq:
         return 2 * self.D / C_SOUND      # round-trip window to depth D [s]
 
 
-# ── External front: the transducer (sets resolution, the source) ──────────
+# ── External front: the transducer (sets resolution; drives the load) ─────
 class Transducer:
+    """The piezo transducer. f_Tx sets the resolution; the element capacitance
+    sets the transmit (load) energy the pulser must deliver."""
+    def __init__(self, capacitance_f=1e-9):
+        self.capacitance_f = capacitance_f
+
     def axial_res(self, f_Tx, n_cycles=N_CYCLES):
         lam = C_SOUND / f_Tx             # wavelength [m]
         return n_cycles * lam / 2.0      # half the spatial pulse length [m]
 
+    def transmit_power(self, acq):
+        # charge/discharge the element each cycle, summed over active channels
+        #   ~ C * Vpp^2 * n_cycles * PRF  per channel
+        return acq.nRx * self.capacitance_f * acq.V_pp ** 2 * acq.n_cycles * acq.PRF
+
 
 # ── Pulse board — send the pulse ──────────────────────────────────────────
 class StandardPulser:
-    """Pulse board: a generic multi-channel HV pulser + T/R switch. Power per
-    active channel = chip dissipation (generic, low-power class) + transmit
-    (charging the transducer capacitance each cycle)."""
-    def __init__(self, channels_exposed=8, power_per_channel_w=0.1e-3,
-                 transducer_capacitance_f=1e-9):
+    """Pulse board: a generic multi-channel HV pulser + T/R switch. Models the
+    chip electronics only (per active channel); the transmit/load energy belongs
+    to the Transducer (see Transducer.transmit_power)."""
+    def __init__(self, channels_exposed=8, power_per_channel_w=0.1e-3):
         self.channels_exposed = channels_exposed
         self.power_per_channel_w = power_per_channel_w
-        self.transducer_capacitance_f = transducer_capacitance_f
 
     def configure(self, acq):
         acq.duty = acq.t_acq * acq.PRF   # active fraction
 
     def power(self, acq):
-        # per active channel: chip dissipation + transmit (charge the cap each cycle)
-        #   transmit ~ C * Vpp^2 * n_cycles * PRF
-        p_tx = self.transducer_capacitance_f * acq.V_pp ** 2 * acq.n_cycles * acq.PRF
-        return acq.nRx * (self.power_per_channel_w + p_tx)
+        return acq.nRx * self.power_per_channel_w   # chip, per active channel
 
 
 # ── AFE board — condition the echo ────────────────────────────────────────
@@ -193,7 +198,7 @@ class System:
     passes the Acq through the boards. Swap a board by changing its class here."""
 
     def __init__(self):
-        self.transducer = Transducer()
+        self.transducer = Transducer(**_params("transducer"))
         self.pulse   = StandardPulser(**_params("pulse"))
         self.echo    = EnvelopeAFE(**_params("echo"))
         self.core    = STM32DualADC(**_params("core"))
@@ -204,7 +209,7 @@ class System:
         self.pulse.configure(acq)        # -> duty
         fits_adc = self.core.acquire(acq, self.echo)   # -> fs, N
         self.core.compute(acq)           # -> data_rate
-        P = {"Pulse": self.pulse.power(acq),
+        P = {"Pulse": self.pulse.power(acq) + self.transducer.transmit_power(acq),
              "Echo":  self.echo.power(acq),
              "Core":  self.core.power(acq),
              "Radio": self.radio.power(acq)}
