@@ -5,20 +5,20 @@ SOFTWARE STRUCTURE  (how this file is wired; the HARDWARE diagram is in config.y
    config.yaml ──load_config()──► CFG          (board parameters + refs)
                                     │ _params(section)
                                     ▼
-   Acq(f_Tx, bits, nRx, PRF, D, mode, V_pp, n_cycles,        ──► System  (builds
-       duty_cycled, rx_window_s)   ── the run-time knobs ──        the boards)
-                                           │
-                                           ▼  System.walk(acq) — Acq passes through
-                                                the boards, each filling its part:
-                                                Pulse.configure → duty
-                                                Core.acquire    → fs, N
-                                                Core.compute    → data_rate
-                                                Σ power ; test BLE & ADC walls
-                                                     │
-                                                     ▼
-                                             result dict:
-                                               P, P_avg, fits_ble, fits_onchip,
-                                               within_hw, fom, axial_res_mm
+   System  ── builds one board object per config section ──┐
+                                                            │
+   Acq(f_Tx, bits, nRx, PRF, D, mode, ...)  ── the knobs ──┤
+                                                            ▼
+                                       Run(system, acq)
+                                         the per-configuration results, each one a
+                                         property derived from the knobs:
+                                            d.duty  d.fs  d.N  d.data_rate
+                                            d.power  d.P_avg
+                                            d.fits_onchip  d.fits_ble
+                                            d.within_channels  d.within_depth
+                                            d.axial_res_mm  d.fom
+
+   usage:  d = System().run(Acq(...));  then  d.P_avg, d.fits_ble, d.power
 
 SCOPE — this is a first-order POWER / DATA-RATE / FEASIBILITY model. For a given
 configuration it estimates: sampling (fs, N), data rate, average power per board,
@@ -27,9 +27,10 @@ the wireless link. It does NOT simulate the ultrasound signal, image, beamformin
 SNR, or circuit-level electronics. (synth_rf_envelope / load_traces below are demo
 traces for the notebook, not part of this model.)
 
-Each board (Pulser, EnvelopeAFE, MixedSignalSoC, BLELink, LiPoBattery) is a
-plain class with a few short methods — read any one to see the pattern. System
-names each board's class; swap one by changing its class there. Transducer, Radio,
+Each board (Pulser, EnvelopeAFE, MixedSignalSoC, BLELink, LiPoBattery) is a plain
+class that owns its parameters and a short power() method. Run asks each board for
+its contribution and assembles the per-configuration results. System names each
+board's class — swap one by changing its class there. Transducer, Radio (BLE),
 Battery are modeled but are NOT ModulUS boards.
 """
 from pathlib import Path
@@ -55,7 +56,7 @@ C_SOUND  = _v(CFG["medium"]["speed_of_sound_ms"])    # m/s soft-tissue speed of 
 N_CYCLES = _v(CFG["excitation"]["pulse_cycles"])     # default excitation pulse length
 
 
-# ── Acquisition context (Acq): fields filled as it passes through the boards
+# ── Acq: the run-time knobs that define one acquisition ──────────────────────
 class Acq:
     def __init__(self, f_Tx, bits, nRx, PRF, D, mode, V_pp=15.0, n_cycles=N_CYCLES,
                  duty_cycled=True, rx_window_s=None):
@@ -69,10 +70,7 @@ class Acq:
         self.n_cycles = n_cycles    # excitation pulse length [cycles]; default 5
         self.duty_cycled = duty_cycled  # disable duty-cycleable blocks between acquisitions?
         self.rx_window_s = rx_window_s  # RX-on time per pulse [s]; None -> echo window 2D/c
-        self.fs = 0.0               # filled by Core.acquire
-        self.N = 0.0                # filled by Core.acquire
-        self.duty = 0.0             # filled by Pulse.configure
-        self.data_rate = 0.0        # filled by Core.compute
+        assert mode in ("RF", "BWR", "features"), f"mode must be RF/BWR/features, got {mode!r}"
 
     @property
     def t_acq(self):
@@ -96,8 +94,9 @@ class Transducer:
         return n_cycles * lam / 2.0      # half the spatial pulse length [m]
 
     def transmit_power(self, acq):
-        # charge/discharge the element each cycle, summed over active channels
-        #   ~ C * Vpp^2 * n_cycles * PRF  per channel
+        # energy to charge/discharge the element each cycle, summed over active
+        # channels: ~ C * Vpp^2 * n_cycles * PRF (a proportionality; this transmit
+        # term is small next to the pulser chip power).
         return acq.nRx * self.capacitance_f * acq.V_pp ** 2 * acq.n_cycles * acq.PRF
 
 
@@ -110,8 +109,8 @@ class Pulser:
         self.channels_exposed = channels_exposed
         self.power_per_channel_w = power_per_channel_w
 
-    def configure(self, acq):
-        acq.duty = min(acq.rx_window * acq.PRF, 1.0)   # on fraction = RX window x PRF
+    def duty(self, acq):
+        return min(acq.rx_window * acq.PRF, 1.0)   # on fraction = RX window x PRF
 
     def power(self, acq):
         return acq.nRx * self.power_per_channel_w   # chip, per active channel
@@ -120,8 +119,8 @@ class Pulser:
 # ── AFE board — condition the echo ────────────────────────────────────────
 class EnvelopeAFE:
     """AFE board: envelope detector (amp -> rectifier -> low-pass), ~4x bandwidth
-    cut. Power is the op-amps' always-on quiescent draw, per channel (the diode
-    and RC filter are negligible by comparison)."""
+    cut. Power is the op-amps' quiescent draw per channel -- enabled the on-fraction
+    (duty) if duty-cycled, else continuously (the diode and RC are negligible)."""
     def __init__(self, bandwidth_reduction=4, amplifiers=4, amp_quiescent_a=1.0e-3,
                  amp_disabled_a=2.4e-6, supply_voltage_v=10.0):
         self.bandwidth_reduction = bandwidth_reduction
@@ -130,13 +129,11 @@ class EnvelopeAFE:
         self.amp_disabled_a = amp_disabled_a
         self.supply_voltage_v = supply_voltage_v
 
-    def bandwidth_factor(self, mode):
+    def bandwidth_factor(self, mode):    # narrows the band so the Core can sample slower
         return 1 if mode == "RF" else self.bandwidth_reduction
 
-    def power(self, acq):
-        # amps enabled the on-fraction (duty) if duty-cycled, else continuously;
-        # disabled the rest. Per active channel.
-        on = acq.duty if acq.duty_cycled else 1.0
+    def power(self, acq, duty):          # op-amp current, summed over the Rx channels
+        on = duty if acq.duty_cycled else 1.0       # fraction of the period the amps are on
         i_avg = self.amp_quiescent_a * on + self.amp_disabled_a * (1 - on)
         return acq.nRx * self.amplifiers * i_avg * self.supply_voltage_v
 
@@ -160,27 +157,24 @@ class MixedSignalSoC:
         self.feature_count = feature_count
         self.feature_bits = feature_bits
 
-    def acquire(self, acq, afe):         # derive fs, N from transducer + AFE
+    def sample_rate(self, acq, afe):     # fs from transducer freq + AFE bandwidth cut
         nyq = self.adc_nyquist_factor * acq.f_Tx
-        acq.fs = nyq / afe.bandwidth_factor(acq.mode)
-        acq.N = acq.fs * acq.t_acq
-        return acq.fs <= self.adc_fs_max_hz          # fits on-chip ADC?
+        return nyq / afe.bandwidth_factor(acq.mode)
 
-    def compute(self, acq):              # MCU decides the payload to ship
+    def data_rate(self, acq, N):         # bits/s the MCU ships, per mode
         if acq.mode == "features":       # a feature = one derived scalar (feature_bits wide)
-            acq.data_rate = self.feature_count * self.feature_bits * acq.PRF * acq.nRx
-        else:                            # RF / BWR differ only via fs -> N
-            acq.data_rate = acq.N * acq.bits * acq.PRF * acq.nRx
+            return self.feature_count * self.feature_bits * acq.PRF * acq.nRx
+        return N * acq.bits * acq.PRF * acq.nRx     # RF / BWR differ only via fs -> N
 
-    def power(self, acq):
-        p_adc = self.adc_fom_j * (2 ** acq.bits) * acq.fs * acq.duty * acq.nRx
+    def power(self, acq, duty, fs):
+        p_adc = self.adc_fom_j * (2 ** acq.bits) * fs * duty * acq.nRx
         run = self.mcu_current_per_mhz_a * self.mcu_clock_mhz * self.supply_voltage_v
         if not acq.duty_cycled:
             return p_adc + run                       # always-on: full run power
         # heavily duty-cycled (STOP between pulses): MCU wakes at run power to acquire
         # (+ extract features in features mode), and sits in STOP the rest of the period.
-        compute = self.mcu_compute_s * acq.PRF if acq.mode == "features" else 0.0
-        awake = min(acq.duty + compute, 1.0)         # acquire window + DSP, per period
+        dsp = self.mcu_compute_s * acq.PRF if acq.mode == "features" else 0.0
+        awake = min(duty + dsp, 1.0)                 # acquire window + DSP, per period
         stop = self.mcu_stop_current_a * self.supply_voltage_v
         return p_adc + run * awake + stop * (1.0 - awake)
 
@@ -202,11 +196,8 @@ class BLELink:
         # effective J per delivered bit: TX draw / PHY rate, x protocol + RX overhead
         return self.overhead_factor * self.tx_current_a * self.supply_voltage_v / self.phy_bitrate_bps
 
-    def fits(self, acq):
-        return acq.data_rate <= self.throughput_max_bps
-
-    def power(self, acq):
-        return acq.data_rate * self.energy_per_bit()
+    def power(self, acq, data_rate):
+        return data_rate * self.energy_per_bit()
 
 
 # ── Battery — external power source ───────────────────────────────────────
@@ -219,8 +210,8 @@ class LiPoBattery:
         self.density_grav_wh_kg = density_grav_wh_kg
         self.reference_cr2032_wh = reference_cr2032_wh
 
-    def size(self, P_avg, days=1):
-        Wh = P_avg * 86400 * days / 3600.0
+    def size(self, P_avg, days=1):       # energy for `days` of runtime -> cell size
+        Wh = P_avg * 86400 * days / 3600.0          # average power held over the period
         return dict(Wh=Wh, vol_cm3=Wh / self.density_vol_wh_l * 1000.0,
                     mass_g=Wh / self.density_grav_wh_kg * 1000.0,
                     n_cr2032=Wh / self.reference_cr2032_wh)
@@ -235,10 +226,60 @@ def fom_mw_per_mhz(P_mW, nRx, f_Tx):     # paper FoM: avg power / Rx ch / f_Tx
     return P_mW / nRx / (f_Tx / 1e6)
 
 
-# ── Motherboard = System: construct the boards, then pass Acq through them ─
+# ── Run: one run of the model (a System + an Acq); results are properties ─────
+class Run:
+    """The model's results for one configuration: a System (the assembled boards)
+    plus one Acq (the knobs). It follows the acquisition chain and exposes each
+    stage as a property — the RX duty, the sampling rate fs and sample count N, the
+    link data_rate, each board's power and the total P_avg, the four feasibility
+    walls (on-chip ADC, BLE link, channel count, PRF-vs-depth), and the axial
+    resolution and mW/MHz figure of merit."""
+    def __init__(self, system, acq):
+        self.system = system
+        self.acq = acq
+
+    # the signal + timing chain: knobs -> duty -> fs -> N -> data_rate ────
+    @property
+    def duty(self):       return self.system.pulse.duty(self.acq)
+    @property
+    def fs(self):         return self.system.core.sample_rate(self.acq, self.system.echo)
+    @property
+    def N(self):          return self.fs * self.acq.t_acq
+    @property
+    def data_rate(self):  return self.system.core.data_rate(self.acq, self.N)
+
+    # power: each board's draw for this configuration, keyed by board ──────
+    @property
+    def power(self):
+        a, b = self.acq, self.system          # a = the knobs, b = the boards
+        return {"Pulse": b.pulse.power(a) + b.transducer.transmit_power(a),
+                "Echo":  b.echo.power(a, self.duty),
+                "Core":  b.core.power(a, self.duty, self.fs),
+                "Radio": b.radio.power(a, self.data_rate)}
+
+    @property
+    def P_avg(self):      return sum(self.power.values())
+
+    # feasibility walls + readouts ───────────────────────────────────────
+    @property
+    def fits_onchip(self):      return self.fs <= self.system.core.adc_fs_max_hz
+    @property
+    def fits_ble(self):         return self.data_rate <= self.system.radio.throughput_max_bps
+    @property
+    def within_channels(self):  return self.acq.nRx <= self.system.pulse.channels_exposed
+    @property
+    def within_depth(self):     return self.acq.rx_window * self.acq.PRF <= 1.0   # PRF <= c/2D
+    @property
+    def axial_res_mm(self):     return self.system.transducer.axial_res(self.acq.f_Tx, self.acq.n_cycles) * 1e3
+    @property
+    def fom(self):              return fom_mw_per_mhz(self.P_avg * 1e3, self.acq.nRx, self.acq.f_Tx)
+
+
+# ── Motherboard = System: construct the boards; run(acq) -> a Run ──────────
 class System:
-    """The Motherboard. Constructs each board from its config params; walk()
-    passes the Acq through the boards. Swap a board by changing its class here."""
+    """The Motherboard. Constructs each board from its config params. Call
+    device.run(acq) to get a Run whose properties are the results. Swap a board by
+    changing its class here."""
 
     def __init__(self):
         self.transducer = Transducer(**_params("transducer"))
@@ -248,21 +289,8 @@ class System:
         self.radio   = BLELink(**_params("radio"))
         self.battery = LiPoBattery(**_params("battery"))
 
-    def walk(self, acq):                 # Acq passes through the boards (signal-chain order)
-        self.pulse.configure(acq)        # -> duty
-        fits_adc = self.core.acquire(acq, self.echo)   # -> fs, N
-        self.core.compute(acq)           # -> data_rate
-        P = {"Pulse": self.pulse.power(acq) + self.transducer.transmit_power(acq),
-             "Echo":  self.echo.power(acq),
-             "Core":  self.core.power(acq),
-             "Radio": self.radio.power(acq)}
-        P_avg = sum(P.values())
-        return dict(acq=acq, P=P, P_avg=P_avg,
-                    axial_res_mm=self.transducer.axial_res(acq.f_Tx, acq.n_cycles) * 1e3,
-                    fits_onchip=fits_adc,
-                    fits_ble=self.radio.fits(acq),
-                    within_hw=acq.nRx <= self.pulse.channels_exposed,
-                    fom=fom_mw_per_mhz(P_avg * 1e3, acq.nRx, acq.f_Tx))
+    def run(self, acq):                  # this System evaluated at these knobs
+        return Run(self, acq)
 
 
 # ── Demo-data twin: real ModulUS traces, or loud synthetic fallback ───────
@@ -281,8 +309,8 @@ def synth_rf_envelope(fs=20e6, f_Tx=2e6, depths_mm=(20.0, 21.5), n_cycles=N_CYCL
 
 
 def load_traces(path="modulus_demo.npz"):
-    """Real ModulUS traces if present; loud synthetic fallback otherwise.
-    NEVER crash in front of the class."""
+    """Return (rf, env, fs): the measured ModulUS .npz if present, otherwise a
+    synthetic trace (with a loud notice) so a live demo never stalls on a missing file."""
     if Path(path).exists():
         d = np.load(path)
         return d["rf"], d["env"], float(d["fs"])
@@ -294,20 +322,19 @@ def load_traces(path="modulus_demo.npz"):
     return synth_rf_envelope()
 
 
-# ── Sanity check (proves the plain-class refactor preserves the numbers) ──
+# ── Self-test: run this file to print the model's outputs at a few op-points ─
 if __name__ == "__main__":
-    sys = System()
+    device = System()
     print("boards:", ", ".join(b.__class__.__name__ for b in
-          (sys.pulse, sys.echo, sys.core, sys.radio, sys.battery)))
+          (device.pulse, device.echo, device.core, device.radio, device.battery)))
 
     def row(tag, f_Tx, bits, nRx, PRF, D, mode):
-        r = sys.walk(Acq(f_Tx, bits, nRx, PRF, D, mode))
-        a = r["acq"]
-        print(f"{tag:12s} fs={a.fs/1e6:5.1f}M  N={a.N:6.0f}  "
-              f"dr={a.data_rate/1e6:7.3f}Mb/s  P={r['P_avg']*1e3:7.2f}mW  "
-              f"FoM={r['fom']:5.2f}  BLE={'OK ' if r['fits_ble'] else 'OVER'}  "
-              f"ADC={'on ' if r['fits_onchip'] else 'EXT'}  "
-              f"res={r['axial_res_mm']:.3f}mm")
+        d = device.run(Acq(f_Tx, bits, nRx, PRF, D, mode))
+        print(f"{tag:12s} fs={d.fs/1e6:5.1f}M  N={d.N:6.0f}  "
+              f"dr={d.data_rate/1e6:7.3f}Mb/s  P={d.P_avg*1e3:7.2f}mW  "
+              f"FoM={d.fom:5.2f}  BLE={'OK ' if d.fits_ble else 'OVER'}  "
+              f"ADC={'on ' if d.fits_onchip else 'EXT'}  "
+              f"res={d.axial_res_mm:.3f}mm")
 
     print("\n=== Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===")
     for m in ("RF", "BWR", "features"):
@@ -318,7 +345,7 @@ if __name__ == "__main__":
         row(m, 10e6, 12, 8, 100, 0.03, m)
 
     print("\n=== Battery (BWR op-point, 1 day) ===")
-    r = sys.walk(Acq(10e6, 12, 1, 25, 0.03, "BWR"))
-    b = sys.battery.size(r["P_avg"])
-    print(f"  P_avg={r['P_avg']*1e3:.2f} mW -> {b['vol_cm3']:.3f} cm3, "
+    d = device.run(Acq(10e6, 12, 1, 25, 0.03, "BWR"))
+    b = device.battery.size(d.P_avg)
+    print(f"  P_avg={d.P_avg*1e3:.2f} mW -> {b['vol_cm3']:.3f} cm3, "
           f"{b['mass_g']:.2f} g, {b['n_cr2032']:.3f} CR2032")

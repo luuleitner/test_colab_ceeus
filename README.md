@@ -1,6 +1,6 @@
 # CEEUS 2026 — ModulUS Power & Architecture Sandbox
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luuleitner/test_colab_ceeus/blob/main/ceeus2026_modulus_power.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luuleitner/test_colab_ceeus/blob/main/2026ceeus_student.ipynb)
 
 Teaching sandbox for the **IEEE CEEUS 2026 Wearables Workshop** (Warsaw, 22–24 Jun 2026),
 by Christoph Leitner (ETH Zurich, Integrated Systems Laboratory).
@@ -23,15 +23,15 @@ To run locally instead:
 
 ```
 pip install -r requirements.txt
-jupyter lab ceeus2026_modulus_power.ipynb
+jupyter lab 2026ceeus_student.ipynb
 ```
 
 ## Contents
 
 | File | What |
 |---|---|
-| `ceeus2026_modulus_power.ipynb` | the guided exercise (Acts 1–3), with TODO cells |
-| `ceeus2026_modulus_power_solutions.ipynb` | the same, with TODOs filled in (instructor / reference) |
+| `2026ceeus_student.ipynb` | the guided exercise (Acts 1–3), with TODO cells |
+| `2026ceeus_teacher.ipynb` | the same, with TODOs filled in (instructor / reference) |
 | `modulus.py` | the ModulUS digital twin (Pulse / Echo / Core / System + Transducer, Radio, Battery) |
 | `config.yaml` | the ModulUS system spec — every value with a reference; edit to model a different system |
 | `requirements.txt` | dependencies (all pre-installed on Colab) |
