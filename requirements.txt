@@ -1,0 +1,14 @@
+# CEEUS 2026 wearables workshop — ModulUS power/battery exercise
+# Runtime deps are all pre-installed on Google Colab; pins are lower bounds
+# for local development. Keep this list lean (research-tier).
+
+# --- core model + plotting (used by modulus.py and the notebook) ---
+numpy>=1.26
+scipy>=1.11          # scipy.signal.hilbert / welch for the envelope + spectra
+matplotlib>=3.9      # 3.9 is the first release with NumPy 2.x-compatible wheels
+
+# --- interactive notebook (the guided slider exploration) ---
+ipywidgets>=8.0
+
+# --- local Jupyter (NOT needed on Colab) ---
+jupyterlab>=4.0

@@ -1,0 +1,83 @@
+# ───────────────────────── Python ─────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+downloads/
+*.egg-info/
+.eggs/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ───────────────────── Virtual environments ───────────────
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ──────────────────── Testing / linting caches ────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ──────────────────────── Jupyter ─────────────────────────
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+profile_default/
+ipython_config.py
+# strip output before committing notebooks; keep this if you use nbstripout
+# *.ipynb
+
+# ─────────────── Editors / IDEs / OS cruft ────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ─────────────── Data / generated artifacts ───────────────
+# Acquired/large traces and run outputs are not source. Commit demo data
+# students need explicitly with `git add -f data/<file>` if required.
+*.npz
+*.npy
+*.mat
+*.h5
+*.hdf5
+*.bin
+*.raw
+*.csv
+*.tsv
+data/
+outputs/
+figures/
+*.log
+
+# Colab writes this from the %%writefile cell at runtime; the tracked copy
+# is the repo-root modulus.py, so ignore stray runtime copies elsewhere.
+**/modulus_runtime.py
+
+# ───────────────────── Secrets / local cfg ────────────────
+.env
+.env.*
+*.local
+secrets.*
