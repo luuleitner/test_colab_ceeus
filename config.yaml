@@ -103,16 +103,28 @@ echo:
       description: "AFE envelope detection cuts the effective bandwidth ~4x (raw 2.9 MHz -> envelope 0.7 MHz)."
       ref: "C. Leitner et al., 'ModulUS,' IEEE IUS, 2025, https://doi.org/10.1109/IUS62464.2025.11201551"
       status: cited
-    power_bias_w:
-      value: 0.004
-      unit: "W"
-      description: "Generic always-on analog AFE bias (part of the ~20 mW static budget)."
-      ref: ""
-      status: model-assumption
-    power_active_w:
-      value: 0.003
-      unit: "W"
-      description: "Generic duty-scaled AFE active draw (part of the ~20 mW static budget)."
+    amplifiers:
+      value: 4
+      unit: "count"
+      description: "Op-amps per AFE channel in the ModulUS/PuLsE envelope detector (4 x ADA4807)."
+      ref: "M. Giordano et al., 'Towards a Novel Ultrasound System Based on Low-Frequency Feature Extraction from a Fully-Printed Flexible Transducer,' IEEE BioCAS, 2023, https://doi.org/10.1109/BioCAS58349.2023.10388792"
+      status: cited
+    amp_quiescent_a:
+      value: 1.0e-3
+      unit: "A"
+      description: "Quiescent supply current per amplifier, enabled (ADA4807-2, typical)."
+      ref: "Analog Devices, 'ADA4807-1/-2/-4 datasheet,' https://www.analog.com/media/en/technical-documentation/data-sheets/ada4807-1_4807-2_4807-4.pdf"
+      status: cited
+    amp_disabled_a:
+      value: 2.4e-6
+      unit: "A"
+      description: "Supply current per amplifier when disabled (ADA4807-2 disable feature)."
+      ref: "Analog Devices, 'ADA4807-1/-2/-4 datasheet,' https://www.analog.com/media/en/technical-documentation/data-sheets/ada4807-1_4807-2_4807-4.pdf"
+      status: cited
+    supply_voltage_v:
+      value: 10.0
+      unit: "V"
+      description: "Total op-amp supply span (+-5 V = 10 V)."
       ref: ""
       status: model-assumption
 

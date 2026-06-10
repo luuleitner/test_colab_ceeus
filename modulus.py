@@ -5,8 +5,9 @@ SOFTWARE STRUCTURE  (how this file is wired; the HARDWARE diagram is in config.y
    config.yaml ──load_config()──► CFG          (board parameters + refs)
                                     │ _params(section)
                                     ▼
-   Acq(f_Tx, bits, nRx, PRF, D, mode, V_pp, n_cycles) ──► System   (builds boards)
-        (the run-time knobs)               │
+   Acq(f_Tx, bits, nRx, PRF, D, mode, V_pp, n_cycles,        ──► System  (builds
+       duty_cycled, rx_window_s)   ── the run-time knobs ──        the boards)
+                                           │
                                            ▼  System.walk(acq) — Acq passes through
                                                 the boards, each filling its part:
                                                 Pulse.configure → duty
@@ -56,7 +57,8 @@ N_CYCLES = _v(CFG["excitation"]["pulse_cycles"])     # default excitation pulse 
 
 # ── Acquisition context (Acq): fields filled as it passes through the boards
 class Acq:
-    def __init__(self, f_Tx, bits, nRx, PRF, D, mode, V_pp=15.0, n_cycles=N_CYCLES):
+    def __init__(self, f_Tx, bits, nRx, PRF, D, mode, V_pp=15.0, n_cycles=N_CYCLES,
+                 duty_cycled=True, rx_window_s=None):
         self.f_Tx = f_Tx            # transducer centre frequency [Hz]
         self.bits = bits            # ADC resolution [bits]
         self.nRx = nRx              # parallel Rx channels
@@ -65,6 +67,8 @@ class Acq:
         self.mode = mode            # 'RF' | 'BWR' | 'features'
         self.V_pp = V_pp            # excitation voltage [Vpp]; default 15 V (ModulUS)
         self.n_cycles = n_cycles    # excitation pulse length [cycles]; default 5
+        self.duty_cycled = duty_cycled  # disable duty-cycleable blocks between acquisitions?
+        self.rx_window_s = rx_window_s  # RX-on time per pulse [s]; None -> echo window 2D/c
         self.fs = 0.0               # filled by Core.acquire
         self.N = 0.0                # filled by Core.acquire
         self.duty = 0.0             # filled by Pulse.configure
@@ -72,7 +76,12 @@ class Acq:
 
     @property
     def t_acq(self):
-        return 2 * self.D / C_SOUND      # round-trip window to depth D [s]
+        return 2 * self.D / C_SOUND      # echo window: round-trip to depth D [s]
+
+    @property
+    def rx_window(self):
+        # how long RX is enabled per pulse: explicit setting, else the echo window
+        return self.rx_window_s if self.rx_window_s is not None else self.t_acq
 
 
 # ── External front: the transducer (sets resolution; drives the load) ─────
@@ -102,7 +111,7 @@ class Pulser:
         self.power_per_channel_w = power_per_channel_w
 
     def configure(self, acq):
-        acq.duty = acq.t_acq * acq.PRF   # active fraction
+        acq.duty = min(acq.rx_window * acq.PRF, 1.0)   # on fraction = RX window x PRF
 
     def power(self, acq):
         return acq.nRx * self.power_per_channel_w   # chip, per active channel
@@ -110,17 +119,26 @@ class Pulser:
 
 # ── AFE board — condition the echo ────────────────────────────────────────
 class EnvelopeAFE:
-    """AFE board: envelope detector (cuts the effective bandwidth ~4x)."""
-    def __init__(self, bandwidth_reduction=4, power_bias_w=4e-3, power_active_w=3e-3):
+    """AFE board: envelope detector (amp -> rectifier -> low-pass), ~4x bandwidth
+    cut. Power is the op-amps' always-on quiescent draw, per channel (the diode
+    and RC filter are negligible by comparison)."""
+    def __init__(self, bandwidth_reduction=4, amplifiers=4, amp_quiescent_a=1.0e-3,
+                 amp_disabled_a=2.4e-6, supply_voltage_v=10.0):
         self.bandwidth_reduction = bandwidth_reduction
-        self.power_bias_w = power_bias_w
-        self.power_active_w = power_active_w
+        self.amplifiers = amplifiers
+        self.amp_quiescent_a = amp_quiescent_a
+        self.amp_disabled_a = amp_disabled_a
+        self.supply_voltage_v = supply_voltage_v
 
     def bandwidth_factor(self, mode):
         return 1 if mode == "RF" else self.bandwidth_reduction
 
     def power(self, acq):
-        return self.power_bias_w + self.power_active_w * acq.duty * acq.nRx
+        # amps enabled the on-fraction (duty) if duty-cycled, else continuously;
+        # disabled the rest. Per active channel.
+        on = acq.duty if acq.duty_cycled else 1.0
+        i_avg = self.amp_quiescent_a * on + self.amp_disabled_a * (1 - on)
+        return acq.nRx * self.amplifiers * i_avg * self.supply_voltage_v
 
 
 # ── Core board — digitize, sequence, compute ──────────────────────────────
