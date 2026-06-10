@@ -1,26 +1,40 @@
 """ModulUS digital twin — lean software mirror of the 4-module sandbox.
 
-Hardware module          -> software twin
-  Motherboard (base)     -> System    interconnect / composition root
-  Pulse (pulser + T/R)   -> Pulse     send the pulse        (8 ch exposed)
-  Echo  (AFE envelope)   -> Echo      catch the echo        (RF passthru | envelope)
-  Core  (STM32 + 2x ADC) -> Core      digitize, sequence, compute
+              ┌──────────────┐
+              │  Transducer  │  external front · f_Tx is the runtime knob
+              └──────┬───────┘
+                RF / echo                                       class
+   ┌─────────────────┼──────────── ModulUS sandbox ──────────┐
+   │          ┌──────┴───────┐                                │
+   │          │    Pulse     │  pulser STHVUP32 + T/R         │   slot 'pulse'
+   │          └──────┬───────┘                                │
+   │          ┌──────┴───────┐                                │
+   │          │    Echo      │  analog front-end (AFE)        │   slot 'echo'
+   │          └──────┬───────┘                                │
+   │          ┌──────┴───────┐                                │
+   │          │    Core      │  STM32L496 + dual 5 Msps ADC   │   slot 'core'
+   │          └──────┬───────┘                                │
+   │           Motherboard   (interconnects the 3 boards)     │   System
+   └─────────────────┼───────────────────────────────────────┘
+                 data │
+        ┌─────────────┴┐                     ┌──────────────┐
+        │Wireless link │  Radio (e.g. BLE)   │   Battery    │   slots
+        └──────────────┘                     └──────────────┘   'radio' / 'battery'
 
-External to the sandbox (modeled, NOT ModulUS boards):
-  Transducer (front)  |  Radio/BLE (downstream)  |  Battery (power source)
-
-f_Tx is the ONE primary knob; fs and axial resolution are DERIVED (the spine):
-  f_Tx -> resolution -> fs (Nyquist) -> N -> data_rate -> power -> battery
-
-Research-tier: lean, modular, constants up top, type hints only at edges.
-Provenance flags:  OK solid · ~ cite TBD · # datasheet/measure
+Each slot is filled by a swappable board, chosen in config.yaml (`type:`) and
+built from a registry. Boards obey a Protocol contract (structural typing) and
+exchange a standardized `Signal`. Add a board = one class + one @register line;
+select it = one word in config.yaml. Transducer, Radio, Battery are modeled but
+are NOT ModulUS boards.
 """
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 import numpy as np
 import yaml
 
 
+# ── Config loading (value / ref / status per entry) ──────────────────────
 def load_config(path=None):
     """Load the ModulUS system definition from config.yaml (the twin's spec)."""
     path = Path(path) if path else Path(__file__).with_name("config.yaml")
@@ -29,7 +43,7 @@ def load_config(path=None):
 
 
 def _v(leaf):
-    """Value of a config leaf: a {value, ref} mapping, or a bare scalar."""
+    """Value of a config leaf: a {value, ref, status} mapping, or a bare scalar."""
     return leaf["value"] if isinstance(leaf, dict) and "value" in leaf else leaf
 
 
@@ -37,41 +51,28 @@ def config_references(cfg=None):
     """Flatten the config into (param, value, ref, status) rows for provenance."""
     cfg = cfg or CFG
     rows = []
-    for board, params in cfg.items():
-        if not isinstance(params, dict):
+    for section, body in cfg.items():
+        if not isinstance(body, dict):
             continue
-        for name, leaf in params.items():
-            ref = leaf.get("ref", "") if isinstance(leaf, dict) else ""
-            status = leaf.get("status", "") if isinstance(leaf, dict) else ""
-            rows.append((f"{board}.{name}", _v(leaf), ref, status))
+        leaves = body.get("params", body)        # board slots nest under 'params'
+        for name, leaf in leaves.items():
+            if isinstance(leaf, dict) and "value" in leaf:
+                rows.append((f"{section}.{name}", _v(leaf),
+                             leaf.get("ref", ""), leaf.get("status", "")))
     return rows
 
 
-# ── Constants: loaded from config.yaml (value + ref per entry) ───────────
 CFG = load_config()
-_phys, _pulse, _echo = CFG["physics"], CFG["pulse"], CFG["echo"]
-_core, _radio, _batt = CFG["core"], CFG["radio"], CFG["battery"]
+C_SOUND  = _v(CFG["physics"]["speed_of_sound_ms"])   # m/s soft-tissue speed of sound
+N_CYCLES = _v(CFG["physics"]["pulse_cycles"])        # excitation pulse length
 
-C_SOUND    = _v(_phys["speed_of_sound_ms"])   # m/s    soft-tissue speed of sound
-N_CYCLES   = _v(_phys["pulse_cycles"])        # excitation pulse length
-K_NYQUIST  = _v(_core["adc_nyquist_factor"])  # fs_RF = K_NYQUIST * f_Tx
-BWR_FACTOR = _v(_echo["bandwidth_reduction"]) # envelope bandwidth reduction
-N_CH_MAX   = _v(_pulse["channels_exposed"])   # channels exposed by ModulUS
-N_FEATURES = _v(_core["feature_count"])       # features-mode payload / A-line
 
-ADC_FOM    = _v(_core["adc_fom_j"])           # Walden ADC FoM [J/conv-step]
-FS_ONCHIP  = _v(_core["adc_fs_max_hz"])       # on-chip ADC ceiling [samp/s]
-E_BIT      = _v(_radio["energy_per_bit_j"])   # effective BLE energy [J/bit]
-R_BLE_MAX  = _v(_radio["throughput_max_bps"]) # usable BLE throughput [bit/s]
-RHO_VOL    = _v(_batt["density_vol_wh_l"])    # Li-ion volumetric density [Wh/L]
-RHO_GRAV   = _v(_batt["density_grav_wh_kg"])  # Li-ion gravimetric density [Wh/kg]
-CR2032_WH  = _v(_batt["reference_cr2032_wh"]) # reference coin cell [Wh]
-
-P_PULSE    = _v(_pulse["power_w"])            # Tx pulser housekeeping [W]
-P_ECHO     = _v(_echo["power_bias_w"])        # always-on analog AFE bias [W]
-P_CORE     = _v(_core["power_idle_w"])        # MCU + housekeeping floor [W]
-P_ECHO_DYN = _v(_echo["power_active_w"])      # AFE active, duty-scaled [W]
-P_FEAT     = _v(_core["power_feature_w"])     # extra MCU draw in features mode [W]
+# ── Standardized IO: a tagged signal passed between boards (ports) ────────
+@dataclass
+class Signal:
+    data: np.ndarray
+    fs: float
+    domain: str          # 'RF' | 'envelope' | 'IQ' | 'features'
 
 
 # ── Acquisition context: state filled as the signal walks the stack ───────
@@ -88,6 +89,57 @@ class Acq:
         return 2 * self.D / C_SOUND      # round-trip window to depth D [s]
 
 
+# ── Board contracts (Protocol = structural typing, no inheritance) ────────
+# Standardized IO/parameters: same-slot boards are interchangeable iff they
+# honor the same Protocol. Behavior lives in the concrete board classes.
+@runtime_checkable
+class Board(Protocol):
+    def power(self, acq) -> float: ...                 # every board reports power [W]
+
+class PulseBoard(Protocol):
+    channels_exposed: int
+    def configure(self, acq) -> None: ...              # sets duty
+    def power(self, acq) -> float: ...
+
+class AFEBoard(Protocol):
+    in_domain: str; out_domain: str
+    def bandwidth_factor(self, mode) -> float: ...     # how much it eases the ADC
+    def process(self, sig: Signal) -> Signal: ...      # real-signal transform
+    def power(self, acq) -> float: ...
+
+class CoreBoard(Protocol):
+    def acquire(self, acq, afe) -> bool: ...           # derive fs, N; fits on-chip?
+    def compute(self, acq) -> None: ...                # set data_rate
+    def power(self, acq) -> float: ...
+
+
+# ── Registry: boards self-register per slot; build() picks from config ────
+BOARDS = {}
+_CONTRACT = {                                          # required methods per slot
+    "pulse":   ("configure", "power"),
+    "echo":    ("bandwidth_factor", "process", "power"),
+    "core":    ("acquire", "compute", "power"),
+    "radio":   ("fits", "power"),
+    "battery": ("size",),
+}
+
+def register(slot, name):
+    """Register a board class under a slot; validate the contract at import."""
+    def deco(cls):
+        for m in _CONTRACT[slot]:
+            assert hasattr(cls, m), f"{cls.__name__} (slot '{slot}') missing {m}()"
+        BOARDS[(slot, name)] = cls
+        return cls
+    return deco
+
+def build(slot, name, params):
+    """Construct board `name` for `slot` with `params` (value-only)."""
+    if (slot, name) not in BOARDS:
+        avail = [n for (s, n) in BOARDS if s == slot]
+        raise ValueError(f"no board '{name}' for slot '{slot}'; available: {avail}")
+    return BOARDS[(slot, name)](**{k: _v(v) for k, v in params.items()})
+
+
 # ── External front: the transducer (sets resolution, the source) ──────────
 @dataclass
 class Transducer:
@@ -98,101 +150,120 @@ class Transducer:
         return self.n_cycles * lam / 2.0 # half the spatial pulse length [m]
 
 
-# ── Pulse = pulser board (STHVUP32 + T/R switch): send the pulse ──────────
+# ── Pulse boards (slot 'pulse') — send the pulse ──────────────────────────
+@register("pulse", "standard_pulser")
 @dataclass
-class Pulse:
-    p_pulser: float = P_PULSE            # W  generic, low-duty Tx
-    n_ch_max: int = N_CH_MAX
+class StandardPulser:
+    """STHVUP32 pulser + T/R switch."""
+    channels_exposed: int = 8
+    power_w: float = 1e-3
 
     def configure(self, acq):
         acq.duty = acq.t_acq * acq.PRF   # active fraction
 
     def power(self, acq):
-        return self.p_pulser             # low-duty Tx; ~constant first order
+        return self.power_w              # low-duty Tx; ~constant first order
 
 
-# ── Echo = AFE board (envelope detector): catch & condition the echo ──────
+# ── AFE boards (slot 'echo') — condition the echo ─────────────────────────
+@register("echo", "envelope")
 @dataclass
-class Echo:
-    bwr_factor: int = BWR_FACTOR
-    p_bias: float = P_ECHO               # W  always-on analog bias
-    p_on: float = P_ECHO_DYN             # W  active, duty-scaled
+class EnvelopeAFE:
+    """Analog front-end as an envelope detector (RF passthru | envelope)."""
+    bandwidth_reduction: int = 4
+    power_bias_w: float = 4e-3
+    power_active_w: float = 3e-3
+    in_domain: str = "RF"
+    out_domain: str = "envelope"
 
     def bandwidth_factor(self, mode):
-        return 1 if mode == "RF" else self.bwr_factor   # how much it eases the ADC
+        return 1 if mode == "RF" else self.bandwidth_reduction
 
-    def process(self, rf):              # real-signal twin: |Hilbert| envelope
+    def process(self, sig):              # real-signal twin: |Hilbert| envelope
         from scipy.signal import hilbert
-        return np.abs(hilbert(rf))
+        return Signal(np.abs(hilbert(sig.data)), sig.fs, "envelope")
 
     def power(self, acq):
-        return self.p_bias + self.p_on * acq.duty * acq.nRx
+        return self.power_bias_w + self.power_active_w * acq.duty * acq.nRx
 
 
-# ── Core = control board (STM32 + dual ADC): digitize, sequence, compute ──
+# ── Core boards (slot 'core') — digitize, sequence, compute ───────────────
+@register("core", "stm32_dual_adc")
 @dataclass
-class Core:
-    fs_max: float = FS_ONCHIP
-    fom: float = ADC_FOM
-    p_idle: float = P_CORE               # W  MCU + housekeeping (the floor)
-    p_feat: float = P_FEAT               # W  on-device feature compute
-    n_features: int = N_FEATURES
+class STM32DualADC:
+    """STM32L496 + dual 5 Msps 12-bit on-chip ADC."""
+    adc_nyquist_factor: int = 2
+    adc_fs_max_hz: float = 5e6
+    adc_fom_j: float = 50e-15
+    power_idle_w: float = 15e-3
+    power_feature_w: float = 2e-3
+    feature_count: int = 16
 
-    def acquire(self, acq, echo):       # derive fs, N from transducer + Echo
-        nyq = K_NYQUIST * acq.f_Tx
-        acq.fs = nyq / echo.bandwidth_factor(acq.mode)
-        acq.N  = acq.fs * acq.t_acq
-        return acq.fs <= self.fs_max    # fits on-chip ADC? (else needs external/FPGA)
+    def acquire(self, acq, afe):         # derive fs, N from transducer + AFE
+        nyq = self.adc_nyquist_factor * acq.f_Tx
+        acq.fs = nyq / afe.bandwidth_factor(acq.mode)
+        acq.N = acq.fs * acq.t_acq
+        return acq.fs <= self.adc_fs_max_hz          # fits on-chip ADC?
 
-    def compute(self, acq):             # MCU decides the payload to ship
+    def compute(self, acq):              # MCU decides the payload to ship
         if acq.mode == "features":
-            acq.data_rate = self.n_features * acq.bits * acq.PRF * acq.nRx
-        else:                           # RF / BWR differ only via fs -> N
+            acq.data_rate = self.feature_count * acq.bits * acq.PRF * acq.nRx
+        else:                            # RF / BWR differ only via fs -> N
             acq.data_rate = acq.N * acq.bits * acq.PRF * acq.nRx
 
     def power(self, acq):
-        p_adc = self.fom * (2**acq.bits) * acq.fs * acq.duty * acq.nRx
-        p_mcu = self.p_idle + (self.p_feat if acq.mode == "features" else 0.0)
+        p_adc = self.adc_fom_j * (2 ** acq.bits) * acq.fs * acq.duty * acq.nRx
+        p_mcu = self.power_idle_w + (self.power_feature_w if acq.mode == "features" else 0.0)
         return p_adc + p_mcu
 
 
-# ── External downstream: BLE radio (NOT a ModulUS board) ──────────────────
+# ── Wireless link (slot 'radio') — downstream, NOT a ModulUS board ────────
+@register("radio", "ble")
 @dataclass
-class Radio:
-    e_bit: float = E_BIT
-    r_max: float = R_BLE_MAX
+class BLELink:
+    energy_per_bit_j: float = 20e-9
+    throughput_max_bps: float = 1e6
 
     def fits(self, acq):
-        return acq.data_rate <= self.r_max
+        return acq.data_rate <= self.throughput_max_bps
 
     def power(self, acq):
-        return acq.data_rate * self.e_bit
+        return acq.data_rate * self.energy_per_bit_j
 
 
-# ── External power source: battery sizing ─────────────────────────────────
+# ── Battery (slot 'battery') — external power source ──────────────────────
+@register("battery", "liion")
 @dataclass
-class Battery:
-    rho_vol: float = RHO_VOL
-    rho_grav: float = RHO_GRAV
+class LiIonBattery:
+    density_vol_wh_l: float = 400.0
+    density_grav_wh_kg: float = 230.0
+    reference_cr2032_wh: float = 0.65
 
     def size(self, P_avg, days=1):
         Wh = P_avg * 86400 * days / 3600.0
-        return dict(Wh=Wh, vol_cm3=Wh / self.rho_vol * 1000.0,
-                    mass_g=Wh / self.rho_grav * 1000.0, n_cr2032=Wh / CR2032_WH)
+        return dict(Wh=Wh, vol_cm3=Wh / self.density_vol_wh_l * 1000.0,
+                    mass_g=Wh / self.density_grav_wh_kg * 1000.0,
+                    n_cr2032=Wh / self.reference_cr2032_wh)
 
 
-def fom_mw_per_mhz(P_mW, nRx, f_Tx):    # paper FoM: avg power / Rx ch / f_Tx
+def fom_mw_per_mhz(P_mW, nRx, f_Tx):     # paper FoM: avg power / Rx ch / f_Tx
     return P_mW / nRx / (f_Tx / 1e6)
 
 
-# ── Motherboard = System: interconnect the twins, walk the spine ──────────
+# ── Motherboard = System: build the boards from config, walk the spine ────
 class System:
-    """The Motherboard. Holds the twins; walk() runs the signal down the stack."""
+    """The Motherboard. Builds each slot's board from config; walk() runs the
+    signal down the stack."""
 
-    def __init__(self):
+    def __init__(self, config=None):
+        cfg = config or CFG
+        b = cfg["boards"]                # the ModulUS definition: slot -> board name
         self.transducer = Transducer()
-        self.pulse, self.echo, self.core = Pulse(), Echo(), Core()
-        self.radio, self.battery = Radio(), Battery()
+        self.pulse   = build("pulse",   b["pulse"],   cfg["pulse"]["params"])
+        self.echo    = build("echo",    b["echo"],    cfg["echo"]["params"])
+        self.core    = build("core",    b["core"],    cfg["core"]["params"])
+        self.radio   = build("radio",   b["radio"],   cfg["radio"]["params"])
+        self.battery = build("battery", b["battery"], cfg["battery"]["params"])
 
     def walk(self, acq):                 # signal flows down the board stack
         self.pulse.configure(acq)        # -> duty
@@ -207,7 +278,7 @@ class System:
                     axial_res_mm=self.transducer.axial_res(acq.f_Tx) * 1e3,
                     fits_onchip=fits_adc,
                     fits_ble=self.radio.fits(acq),
-                    within_hw=acq.nRx <= N_CH_MAX,         # beyond 8 ch = extrapolation
+                    within_hw=acq.nRx <= self.pulse.channels_exposed,
                     fom=fom_mw_per_mhz(P_avg * 1e3, acq.nRx, acq.f_Tx))
 
 
@@ -229,7 +300,6 @@ def synth_rf_envelope(fs=20e6, f_Tx=2e6, depths_mm=(20.0, 21.5), n_cycles=N_CYCL
 def load_traces(path="modulus_demo.npz"):
     """Real ModulUS traces if present; loud synthetic fallback otherwise.
     NEVER crash in front of the class."""
-    from pathlib import Path
     if Path(path).exists():
         d = np.load(path)
         return d["rf"], d["env"], float(d["fs"])
@@ -241,9 +311,10 @@ def load_traces(path="modulus_demo.npz"):
     return synth_rf_envelope()
 
 
-# ── Sanity check (proves twin reproduces the flat-model numbers) ──────────
+# ── Sanity check (proves the registry/board refactor preserves the numbers)
 if __name__ == "__main__":
     sys = System()
+    print("registered boards:", sorted(BOARDS))
 
     def row(tag, f_Tx, bits, nRx, PRF, D, mode):
         r = sys.walk(Acq(f_Tx, bits, nRx, PRF, D, mode))
@@ -254,7 +325,7 @@ if __name__ == "__main__":
               f"ADC={'on ' if r['fits_onchip'] else 'EXT'}  "
               f"res={r['axial_res_mm']:.3f}mm")
 
-    print("=== Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===")
+    print("\n=== Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===")
     for m in ("RF", "BWR", "features"):
         row(m, 10e6, 12, 1, 25, 0.03, m)
 
