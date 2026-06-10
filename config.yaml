@@ -201,18 +201,36 @@ core:
 #      Core ─bits─►  (((•)))  ─►  host           ~1 Mb/s usable ceiling
 radio:
   params:
-    energy_per_bit_j:
-      value: 20.0e-9
-      unit: "J/bit"
-      description: "Order-of-magnitude effective BLE energy per bit (~10-50 nJ/bit, strongly payload/interval-dependent)."
+    tx_current_a:
+      value: 3.2e-3
+      unit: "A"
+      description: "Radio TX current at 0 dBm with DC/DC for a representative low-power BLE SoC."
+      ref: "Nordic Semiconductor, 'nRF5340 Product Specification v1.3.1,' 2023, https://docs.nordicsemi.com/bundle/ps_nrf5340/"
+      status: cited
+    supply_voltage_v:
+      value: 3.0
+      unit: "V"
+      description: "Radio supply (DC/DC typical operating point)."
+      ref: ""
+      status: model-assumption
+    phy_bitrate_bps:
+      value: 1.0e+6
+      unit: "bit/s"
+      description: "BLE LE 1M PHY raw on-air bit rate (the default Bluetooth LE PHY)."
+      ref: "Bluetooth SIG, 'Bluetooth Core Specification' (LE 1M PHY)."
+      status: cited
+    overhead_factor:
+      value: 2.0
+      unit: "ratio"
+      description: "Effective radio-on time per delivered bit vs raw TX (RX windows + headers + idle); lands energy/bit ~19 nJ/bit, within the measured 10-50 nJ/bit BLE range."
       ref: "M. Siekkinen et al., 'How low energy is Bluetooth Low Energy? Comparative measurements with ZigBee/802.15.4,' IEEE WCNCW, 2012, pp. 232-237, https://doi.org/10.1109/WCNCW.2012.6215496"
       status: model-assumption
     throughput_max_bps:
-      value: 1.0e+6
+      value: 3.0e+5
       unit: "bit/s"
-      description: "Conservative usable BLE ceiling; the cited review reports ~1.3-1.4 Mb/s max application throughput (BLE 5 LE-2M)."
-      ref: "J. Tosi et al., 'Performance Evaluation of Bluetooth Low Energy: A Systematic Review,' Sensors, vol. 17, no. 12, art. 2898, 2017, https://doi.org/10.3390/s17122898"
-      status: model-assumption
+      description: "Practical usable BLE application throughput, well below the ~1 Mb/s theoretical (measured BLE is ~0.22-0.3 Mb/s)."
+      ref: "IEEE Xplore doc. 11418920, https://ieeexplore.ieee.org/document/11418920"
+      status: cited
 
 
 # ── Battery — external power source ───────────────────────────────────────

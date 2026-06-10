@@ -187,16 +187,26 @@ class MixedSignalSoC:
 
 # ── Wireless link — downstream, NOT a ModulUS board ───────────────────────
 class BLELink:
-    """Wireless link: Bluetooth Low Energy."""
-    def __init__(self, energy_per_bit_j=20e-9, throughput_max_bps=1e6):
-        self.energy_per_bit_j = energy_per_bit_j
+    """Wireless link: a low-power BLE SoC, downstream of ModulUS -- NOT a sandbox
+    board. energy/bit = the radio's TX draw spread over the PHY bit rate, inflated by
+    RX/protocol overhead; data_rate must stay under the practical throughput ceiling."""
+    def __init__(self, tx_current_a=3.2e-3, supply_voltage_v=3.0, phy_bitrate_bps=1.0e6,
+                 overhead_factor=2.0, throughput_max_bps=300e3):
+        self.tx_current_a = tx_current_a
+        self.supply_voltage_v = supply_voltage_v
+        self.phy_bitrate_bps = phy_bitrate_bps
+        self.overhead_factor = overhead_factor
         self.throughput_max_bps = throughput_max_bps
+
+    def energy_per_bit(self):
+        # effective J per delivered bit: TX draw / PHY rate, x protocol + RX overhead
+        return self.overhead_factor * self.tx_current_a * self.supply_voltage_v / self.phy_bitrate_bps
 
     def fits(self, acq):
         return acq.data_rate <= self.throughput_max_bps
 
     def power(self, acq):
-        return acq.data_rate * self.energy_per_bit_j
+        return acq.data_rate * self.energy_per_bit()
 
 
 # ── Battery — external power source ───────────────────────────────────────
