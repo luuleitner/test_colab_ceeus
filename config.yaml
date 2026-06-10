@@ -1,9 +1,8 @@
 # ════════════════════════════════════════════════════════════════════════
 #  ModulUS system definition — the digital-twin spec.
 #
-#  >>> WHICH board fills each slot is defined ONCE in `boards:` below. <<<
-#  Swap a board by changing a name there; its numbers live in the matching
-#  section's `params:` (modulus.py builds the board from a registry).
+#  Each section below holds ONE board's parameters. Which board class fills each
+#  slot is chosen in modulus.py (System); here you set the numbers.
 #
 #               ┌──────────────┐
 #               │  Transducer  │  external front · f_Tx is the runtime knob
@@ -31,17 +30,6 @@
 #       verified          value backed by a citation (ref points to it)
 #       model-assumption  a number we chose; no citation (ref states the basis)
 # ════════════════════════════════════════════════════════════════════════
-
-
-# ── THE MODULUS DEFINITION: which board fills each slot ────────────────────
-#  (pulse / echo / core are the sandbox daughterboards; radio / battery are
-#   external. Swap any value for another registered board name.)
-boards:
-  pulse:   standard_pulser
-  echo:    envelope            # AFE variant: envelope | (later: iq_mixer | bandpass)
-  core:    stm32_dual_adc
-  radio:   ble
-  battery: liion
 
 
 # ── physics: medium + pulse constants ─────────────────────────────────────
