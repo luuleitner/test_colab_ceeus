@@ -238,20 +238,20 @@ radio:
 battery:
   params:
     density_vol_wh_l:
-      value: 400
+      value: 313
       unit: "Wh/L"
-      description: "Volumetric energy density within the commercial Li-ion range (~300-700 Wh/L); conservative for small-format cells."
-      ref: "R. Schmuch et al., 'Performance and cost of materials for lithium-based rechargeable automotive batteries,' Nat. Energy, vol. 3, pp. 267-278, 2018, https://doi.org/10.1038/s41560-018-0107-2"
+      description: "Volumetric energy density of a representative small Li-polymer wearable cell: 600 mAh x 3.7 V = 2.22 Wh in 6.5 x 42.5 x 25.7 mm (7.10 cm3)."
+      ref: "Renata SA, 'ICP622540PMT Rechargeable Li-Ion Polymer Battery (3.7 V, 600 mAh) datasheet,' https://www.renata.com/en/downloads/?product=icp622540pmt"
       status: model-assumption
     density_grav_wh_kg:
-      value: 230
+      value: 202
       unit: "Wh/kg"
-      description: "Gravimetric energy density within the commercial Li-ion range (~150-250 Wh/kg)."
-      ref: "R. Schmuch et al., Nat. Energy, vol. 3, pp. 267-278, 2018, https://doi.org/10.1038/s41560-018-0107-2"
+      description: "Gravimetric energy density of the same Li-polymer cell: 2.22 Wh / 11 g."
+      ref: "Renata SA, 'ICP622540PMT Rechargeable Li-Ion Polymer Battery (3.7 V, 600 mAh) datasheet,' https://www.renata.com/en/downloads/?product=icp622540pmt"
       status: model-assumption
     reference_cr2032_wh:
       value: 0.65
       unit: "Wh"
-      description: "Conservative usable energy of a CR2032 coin cell; datasheet nominal 225 mAh x 3 V = 0.675 Wh."
-      ref: "Energizer, 'CR2032 Product Datasheet,' https://data.energizer.com/pdfs/cr2032.pdf"
+      description: "Conservative usable energy of a CR2032 coin cell; Swiss-made datasheet nominal 225 mAh x 3 V = 0.675 Wh."
+      ref: "Renata SA, 'CR2032 3 V Lithium Coin Cell datasheet' (Swiss Made), https://www.renata.com/en-us/products/lithium-batteries/cr2032.mfr-/"
       status: model-assumption

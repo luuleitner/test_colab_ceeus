@@ -27,7 +27,7 @@ the wireless link. It does NOT simulate the ultrasound signal, image, beamformin
 SNR, or circuit-level electronics. (synth_rf_envelope / load_traces below are demo
 traces for the notebook, not part of this model.)
 
-Each board (Pulser, EnvelopeAFE, MixedSignalSoC, BLELink, LiIonBattery) is a
+Each board (Pulser, EnvelopeAFE, MixedSignalSoC, BLELink, LiPoBattery) is a
 plain class with a few short methods — read any one to see the pattern. System
 names each board's class; swap one by changing its class there. Transducer, Radio,
 Battery are modeled but are NOT ModulUS boards.
@@ -210,9 +210,10 @@ class BLELink:
 
 
 # ── Battery — external power source ───────────────────────────────────────
-class LiIonBattery:
-    """Battery: sizes the wearable from the average power."""
-    def __init__(self, density_vol_wh_l=400.0, density_grav_wh_kg=230.0,
+class LiPoBattery:
+    """Battery: a Li-polymer cell, sized from the average power (also reported as
+    an equivalent CR2032 coin-cell count for intuition)."""
+    def __init__(self, density_vol_wh_l=313.0, density_grav_wh_kg=202.0,
                  reference_cr2032_wh=0.65):
         self.density_vol_wh_l = density_vol_wh_l
         self.density_grav_wh_kg = density_grav_wh_kg
@@ -245,7 +246,7 @@ class System:
         self.echo    = EnvelopeAFE(**_params("echo"))
         self.core    = MixedSignalSoC(**_params("core"))
         self.radio   = BLELink(**_params("radio"))
-        self.battery = LiIonBattery(**_params("battery"))
+        self.battery = LiPoBattery(**_params("battery"))
 
     def walk(self, acq):                 # Acq passes through the boards (signal-chain order)
         self.pulse.configure(acq)        # -> duty
