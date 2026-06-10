@@ -146,13 +146,19 @@ class MixedSignalSoC:
     """Core board: a mixed-signal SoC (MCU + on-chip ADC; here dual 5 Msps,
     12-bit). An FPGA back-end (external ADC, higher fs) would be a sibling class."""
     def __init__(self, adc_nyquist_factor=2, adc_fs_max_hz=5e6, adc_fom_j=50e-15,
-                 power_idle_w=15e-3, power_feature_w=2e-3, feature_count=16):
+                 mcu_clock_mhz=250.0, mcu_current_per_mhz_a=70.1e-6,
+                 mcu_stop_current_a=90e-6, mcu_compute_s=100e-6,
+                 supply_voltage_v=3.3, feature_count=16, feature_bits=16):
         self.adc_nyquist_factor = adc_nyquist_factor
         self.adc_fs_max_hz = adc_fs_max_hz
         self.adc_fom_j = adc_fom_j
-        self.power_idle_w = power_idle_w
-        self.power_feature_w = power_feature_w
+        self.mcu_clock_mhz = mcu_clock_mhz
+        self.mcu_current_per_mhz_a = mcu_current_per_mhz_a
+        self.mcu_stop_current_a = mcu_stop_current_a
+        self.mcu_compute_s = mcu_compute_s
+        self.supply_voltage_v = supply_voltage_v
         self.feature_count = feature_count
+        self.feature_bits = feature_bits
 
     def acquire(self, acq, afe):         # derive fs, N from transducer + AFE
         nyq = self.adc_nyquist_factor * acq.f_Tx
@@ -161,15 +167,22 @@ class MixedSignalSoC:
         return acq.fs <= self.adc_fs_max_hz          # fits on-chip ADC?
 
     def compute(self, acq):              # MCU decides the payload to ship
-        if acq.mode == "features":
-            acq.data_rate = self.feature_count * acq.bits * acq.PRF * acq.nRx
+        if acq.mode == "features":       # a feature = one derived scalar (feature_bits wide)
+            acq.data_rate = self.feature_count * self.feature_bits * acq.PRF * acq.nRx
         else:                            # RF / BWR differ only via fs -> N
             acq.data_rate = acq.N * acq.bits * acq.PRF * acq.nRx
 
     def power(self, acq):
         p_adc = self.adc_fom_j * (2 ** acq.bits) * acq.fs * acq.duty * acq.nRx
-        p_mcu = self.power_idle_w + (self.power_feature_w if acq.mode == "features" else 0.0)
-        return p_adc + p_mcu
+        run = self.mcu_current_per_mhz_a * self.mcu_clock_mhz * self.supply_voltage_v
+        if not acq.duty_cycled:
+            return p_adc + run                       # always-on: full run power
+        # heavily duty-cycled (STOP between pulses): MCU wakes at run power to acquire
+        # (+ extract features in features mode), and sits in STOP the rest of the period.
+        compute = self.mcu_compute_s * acq.PRF if acq.mode == "features" else 0.0
+        awake = min(acq.duty + compute, 1.0)         # acquire window + DSP, per period
+        stop = self.mcu_stop_current_a * self.supply_voltage_v
+        return p_adc + run * awake + stop * (1.0 - awake)
 
 
 # ── Wireless link — downstream, NOT a ModulUS board ───────────────────────

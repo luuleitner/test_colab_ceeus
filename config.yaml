@@ -17,7 +17,7 @@
 #    │          │    Echo      │  analog front-end (AFE)        │   echo
 #    │          └──────┬───────┘                                │
 #    │          ┌──────┴───────┐                                │
-#    │          │    Core      │  STM32L496 + dual 5 Msps ADC   │   core
+#    │          │    Core      │  STM32H573 + 5 Msps ADC        │   core
 #    │          └──────┬───────┘                                │
 #    │           Motherboard   (interconnects the 3 boards)     │
 #    └─────────────────┼───────────────────────────────────────┘
@@ -129,7 +129,7 @@ echo:
       status: model-assumption
 
 
-# ── Core board: STM32L496 + dual 5 Msps ADC — digitize & compute ──────────
+# ── Core board: STM32H573 (Cortex-M33) + 5 Msps ADC — digitize & compute ──
 #      analog ─► ┌──────────┐ ─► ┌─────┐ ─►  features / store / link
 #                │ ADC 2×5M │    │ MCU │
 #                └──────────┘    └─────┘
@@ -144,8 +144,8 @@ core:
     adc_fs_max_hz:
       value: 5.0e+6
       unit: "samples/s"
-      description: "On-chip 12-bit ADC maximum sampling rate (STM32L496)."
-      ref: "STMicroelectronics, 'STM32L496xx datasheet' (DS11585), https://www.st.com/resource/en/datasheet/stm32l496ae.pdf"
+      description: "On-chip 12-bit ADC maximum sampling rate (STM32H573, two ADCs up to 5 Msps in 12-bit)."
+      ref: "STMicroelectronics, 'STM32H573xx datasheet' (DS14121), https://www.st.com/resource/en/datasheet/stm32h573ai.pdf"
       status: cited
     adc_fom_j:
       value: 50.0e-15
@@ -153,22 +153,46 @@ core:
       description: "Representative MCU-class Walden ADC FoM = P/(2^ENOB*fs) (efficient ADCs <10 fJ); P_adc is negligible at our duty cycles."
       ref: "R. H. Walden, 'Analog-to-digital converter survey and analysis,' IEEE JSAC, vol. 17, no. 4, pp. 539-550, 1999, https://doi.org/10.1109/49.761034 ; B. Murmann, 'ADC Performance Survey,' https://github.com/bmurmann/ADC-survey"
       status: model-assumption
-    power_idle_w:
-      value: 0.015
-      unit: "W"
-      description: "Generic MCU + housekeeping power floor (dominates the ~20 mW static budget)."
+    mcu_clock_mhz:
+      value: 250.0
+      unit: "MHz"
+      description: "MCU core clock; the STM32H573 runs up to 250 MHz (VOS0)."
+      ref: "STMicroelectronics, 'STM32H573xx datasheet' (DS14121), https://www.st.com/resource/en/datasheet/stm32h573ai.pdf"
+      status: cited
+    mcu_current_per_mhz_a:
+      value: 70.1e-6
+      unit: "A/MHz"
+      description: "Run-mode supply current per MHz: CoreMark from flash, SMPS regulator, peripherals off (STM32H573 at 250 MHz, VOS0)."
+      ref: "STMicroelectronics, 'STM32H573xx datasheet' (DS14121), Table 33, https://www.st.com/resource/en/datasheet/stm32h573ai.pdf"
+      status: cited
+    mcu_stop_current_a:
+      value: 90.0e-6
+      unit: "A"
+      description: "STOP-mode supply current, SRAM retained, SMPS (STM32H573, SVOS3); the duty-cycled idle floor between acquisitions."
+      ref: "STMicroelectronics, 'STM32H573xx datasheet' (DS14121), Table 36, https://www.st.com/resource/en/datasheet/stm32h573ai.pdf"
+      status: cited
+    mcu_compute_s:
+      value: 100.0e-6
+      unit: "s"
+      description: "Generic on-board feature-extraction (DSP) time per pulse; the MCU is awake at run power for this window in features mode (RF/BWR add none)."
       ref: ""
       status: model-assumption
-    power_feature_w:
-      value: 0.002
-      unit: "W"
-      description: "Generic extra MCU draw for on-device feature extraction."
+    supply_voltage_v:
+      value: 3.3
+      unit: "V"
+      description: "MCU/ADC digital supply VDD (the datasheet run-mode currents are typ at VDD = 3.3 V)."
       ref: ""
       status: model-assumption
     feature_count:
       value: 16
       unit: "count"
       description: "Illustrative number of features shipped per A-line in features mode."
+      ref: ""
+      status: model-assumption
+    feature_bits:
+      value: 16
+      unit: "bits"
+      description: "Bit-width of one transmitted feature (int16); a feature is a derived scalar, not an ADC sample."
       ref: ""
       status: model-assumption
 
