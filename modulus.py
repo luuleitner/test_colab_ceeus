@@ -26,7 +26,7 @@ the wireless link. It does NOT simulate the ultrasound signal, image, beamformin
 SNR, or circuit-level electronics. (synth_rf_envelope / load_traces below are demo
 traces for the notebook, not part of this model.)
 
-Each board (StandardPulser, EnvelopeAFE, STM32DualADC, BLELink, LiIonBattery) is a
+Each board (Pulser, EnvelopeAFE, MixedSignalSoC, BLELink, LiIonBattery) is a
 plain class with a few short methods — read any one to see the pattern. System
 names each board's class; swap one by changing its class there. Transducer, Radio,
 Battery are modeled but are NOT ModulUS boards.
@@ -93,7 +93,7 @@ class Transducer:
 
 
 # ── Pulse board — send the pulse ──────────────────────────────────────────
-class StandardPulser:
+class Pulser:
     """Pulse board: a generic multi-channel HV pulser + T/R switch. Models the
     chip electronics only (per active channel); the transmit/load energy belongs
     to the Transducer (see Transducer.transmit_power)."""
@@ -124,8 +124,9 @@ class EnvelopeAFE:
 
 
 # ── Core board — digitize, sequence, compute ──────────────────────────────
-class STM32DualADC:
-    """Core board: STM32L496 + dual 5 Msps 12-bit on-chip ADC."""
+class MixedSignalSoC:
+    """Core board: a mixed-signal SoC (MCU + on-chip ADC; here dual 5 Msps,
+    12-bit). An FPGA back-end (external ADC, higher fs) would be a sibling class."""
     def __init__(self, adc_nyquist_factor=2, adc_fs_max_hz=5e6, adc_fom_j=50e-15,
                  power_idle_w=15e-3, power_feature_w=2e-3, feature_count=16):
         self.adc_nyquist_factor = adc_nyquist_factor
@@ -199,9 +200,9 @@ class System:
 
     def __init__(self):
         self.transducer = Transducer(**_params("transducer"))
-        self.pulse   = StandardPulser(**_params("pulse"))
+        self.pulse   = Pulser(**_params("pulse"))
         self.echo    = EnvelopeAFE(**_params("echo"))
-        self.core    = STM32DualADC(**_params("core"))
+        self.core    = MixedSignalSoC(**_params("core"))
         self.radio   = BLELink(**_params("radio"))
         self.battery = LiIonBattery(**_params("battery"))
 
