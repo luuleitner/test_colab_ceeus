@@ -30,7 +30,8 @@ jupyter lab ceeus2026_modulus_power.ipynb
 
 | File | What |
 |---|---|
-| `ceeus2026_modulus_power.ipynb` | the guided exercise (Acts 1–3) |
+| `ceeus2026_modulus_power.ipynb` | the guided exercise (Acts 1–3), with TODO cells |
+| `ceeus2026_modulus_power_solutions.ipynb` | the same, with TODOs filled in (instructor / reference) |
 | `modulus.py` | the ModulUS digital twin (Ping / Echo / Core / System + Transducer, Radio, Battery) |
 | `requirements.txt` | dependencies (all pre-installed on Colab) |
 
