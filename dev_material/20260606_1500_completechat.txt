@@ -1,0 +1,2958 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop> claude
+╭─── Claude Code v2.1.162 ─────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting started                                        │
+│               Welcome back Christoph!              │ Run /init to create a CLAUDE.md file with instructions for Cla… │
+│                                                    │ ─────────────────────────────────────────────────────────────── │
+│                       ▐▛███▜▌                      │ What's new                                                      │
+│                      ▝▜█████▛▘                     │ Bug fixes and reliability improvements                          │
+│                        ▘▘ ▝▝                       │ Added `fallbackModel` setting to configure up to three fallbac… │
+│       Opus 4.8 (1M context) · Claude Max ·         │ Added glob pattern support in deny rule tool-name position (`"… │
+│       chu.leitner@gmail.com's Organization         │ /release-notes for more                                         │
+│  ~\code\lab\academia\teaching\2026_ceeus_workshop  │                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ ▎ Opus 4.8 is here! Now defaults to high effort · /effort xhigh for your hardest tasks
+
+❯ I have switched from the claude online interface to claude code CLI. To bring you up to speed can you read:
+  "C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\dev_material\ceeus2026_workshop_brief.md" and also the
+  paper: "C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\dev_material\modulus_ius2025.pdf". Also I want
+  you to act as an expert in the field of wearable ultrasound like Prof. Luca Benini, Prof. Robert Rohling, Prof.
+  Siddhartha Sikdar and Prof. Sheng Xu. Also I want you to be a pedagogic expert developing teaching and syllabus in
+  academia.
+
+● I'll read both files to get up to speed.
+
+  Read 2 files (ctrl+o to expand)
+
+● The brief came through fully. The PDF is password-protected, so I couldn't open it directly. Let me try to handle
+  that.
+
+● Bash(cd /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/dev_material && python -c "
+      import sys…)
+  ⎿  no pypdf
+
+● Bash(pip install pypdf -q 2>&1 | tail -2 && python -c "
+      import pypdf…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 2, in <module>
+       File "C:\Users\chule\AppData\Local\Programs\Python\Python36\lib\site-packages\pypdf\__init__.py", line 11, in
+     <module>
+         from ._doc_common import DocumentInformation
+       File "C:\Users\chule\AppData\Local\Programs\Python\Python36\lib\site-packages\pypdf\_doc_common.py", line 48, in
+     <module>
+         from ._encryption import Encryption
+       File "C:\Users\chule\AppData\Local\Programs\Python\Python36\lib\site-packages\pypdf\_encryption.py", line 46, in
+     <module>
+         from ._utils import logger_warning
+       File "C:\Users\chule\AppData\Local\Programs\Python\Python36\lib\site-packages\pypdf\_utils.py", line 523, in
+     <module>
+
+     … +10 lines (ctrl+o to expand)
+
+● Python 3.6 is too old for modern pypdf. Let me check for other Python versions or use an older library.
+
+● Bash(py -0p 2>/dev/null; echo "---"; pip install "pypdf==3.17.4" -q 2>&1 | tail -1)
+  ⎿   -V:3.12 *        C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfr
+     a8p0\python3.12.exe
+      -V:3.11          C:\Users\chule\AppData\Local\Programs\Python\Python311\python.exe
+     … +5 lines (ctrl+o to expand)
+
+● Bash(py -3.12 -m pip install pypdf -q 2>&1 | tail -1; echo "==="; py -3.12 -c "
+      import pypdf…)
+  ⎿  Error: Exit code 1
+     [notice] To update, run:
+     C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m
+     pip install --upgrade pip
+     ===
+     Traceback (most recent call last):
+       File "<string>", line 12, in <module>
+       File "C:\Program
+     Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py",
+     line 19, in encode
+         return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     UnicodeEncodeError: 'charmap' codec can't encode character '\u2217' in position 92: character maps to <undefined>
+     encrypted: False
+
+     … +1 line (ctrl+o to expand)
+
+● pypdf reads it fine (the error was just a Windows console unicode issue). Let me extract the full text.
+
+● Bash(py -3.12 -c "
+      import pypdf, io…)
+  ⎿  wrote 21646 chars, 4 pages
+
+  Read 1 file (ctrl+o to expand)
+
+● Both read. I'm up to speed. Here's my synthesis to confirm we're aligned.
+
+  What this workshop is
+
+  CEEUS 2026, Warsaw, 22–24 Jun — your ~20 min talk + live ModulUS acquisition + ~30 min Colab. You own the
+  system–power–data axis (Xu owns transducers Mon, Vostrikov owns platforms Tue, Costa owns ASIC endgame Wed). Don't
+  re-teach what they cover.
+
+  The one spine that unifies talk + Colab + exercise
+
+  resolution ──► frequency ──► Nyquist/data rate ──► power ──► battery ──► wearability
+    (teach it)              (compute it in Colab)            (invert it in closing exercise)
+
+  The designed "oh": raw RF on a single channel already breaks the ~1 Mbit/s BLE usable ceiling. Lesson is "this
+  architecture cannot exist," not "use a bigger battery." Three escape routes — lower f_Tx (costs axial res), analog BWR
+  (ModulUS path, keeps res, loses phase), on-device features (radio collapses, costs MCU compute).
+
+  What the paper actually nails down (the anchors you can quote)
+
+  ModulUS: 4-board sandbox, 260×115×40 mm (NOT wearable — a catalyst)
+    TxRx     STHVUP32, 32-ch pulser, 8 exposed Tx/Rx
+    AFE      analog BWR, envelope detection
+    Compute  STM32L496 (Cortex-M4, dual 5 Msps 12-bit ADC) + NRF53 BLE
+
+  Validation: 10 MHz tx, 5-cycle, 0.7 mm PET disc in water
+    BWR:  raw mean 2.9 MHz ──► envelope mean 0.7 MHz  (~4× reduction)
+    Fidelity vs Hilbert: R² = 0.88  (diff = expected phase removal)
+    Axial res ≈ 0.38 mm; f_min = nc/2d ≈ 5.5 MHz to resolve the disc
+
+  FoM = avg power / Rx channel / f_Tx  [mW/MHz]:
+    PuLsE 0.6 ↓ | TinyProbe 2.0 | WULPUS 5.5 | USoP 102.3
+
+  Two things I want to flag before building the Colab (these are your §7 open questions, sharpened)
+  re-teach what they cover.
+
+  The one spine that unifies talk + Colab + exercise
+
+  resolution ──► frequency ──► Nyquist/data rate ──► power ──► battery ──► wearability
+    (teach it)              (compute it in Colab)            (invert it in closing exercise)
+
+  The designed "oh": raw RF on a single channel already breaks the ~1 Mbit/s BLE usable ceiling. Lesson is "this
+  architecture cannot exist," not "use a bigger battery." Three escape routes — lower f_Tx (costs axial res), analog BWR
+  (ModulUS path, keeps res, loses phase), on-device features (radio collapses, costs MCU compute).
+
+  What the paper actually nails down (the anchors you can quote)
+
+  ModulUS: 4-board sandbox, 260×115×40 mm (NOT wearable — a catalyst)
+    TxRx     STHVUP32, 32-ch pulser, 8 exposed Tx/Rx
+    AFE      analog BWR, envelope detection
+    Compute  STM32L496 (Cortex-M4, dual 5 Msps 12-bit ADC) + NRF53 BLE
+
+  Validation: 10 MHz tx, 5-cycle, 0.7 mm PET disc in water
+    BWR:  raw mean 2.9 MHz ──► envelope mean 0.7 MHz  (~4× reduction)
+    Fidelity vs Hilbert: R² = 0.88  (diff = expected phase removal)
+    Axial res ≈ 0.38 mm; f_min = nc/2d ≈ 5.5 MHz to resolve the disc
+
+  FoM = avg power / Rx channel / f_Tx  [mW/MHz]:
+    PuLsE 0.6 ↓ | TinyProbe 2.0 | WULPUS 5.5 | USoP 102.3
+
+  Two things I want to flag before building the Colab (these are your §7 open questions, sharpened)
+
+  1. The two "mW/MHz" are not the same metric — deck and Colab will disagree if we don't reconcile.
+  - Paper's mW/MHz = power per Rx channel, normalized by f_Tx (a resolution-aware cross-system FoM).
+  - Brief's slide 11 mW/MHz = total-system power per data-representation mode (RF/BWR/features) — the data lever.
+
+  These tell different stories. The Colab skeleton computes total P_avg, not per-channel-per-f_Tx. We should decide:
+  does the Colab report the paper's FoM (so the live ModulUS number ties out), the lever framing, or both side-by-side?
+  My recommendation: compute total power as the spine output, then derive the paper's FoM as a labeled secondary line so
+  the 0.6 mW/MHz anchor reproduces and students see why normalization matters.
+
+  2. Audience floor sets TODO-cell scaffolding depth — this gates how I write the notebook.
+
+● User answered Claude's questions:
+  ⎿  · What's the audience floor for the Colab? This sets how much Python scaffolding the 2–3 TODO cells need. → the
+     audiance will be mixed. neverthless its a systenm design course and  i want to focus it on the embedded/EE side. I
+     want to convey this perspective. Nevertheless I need to "collect" the other researcher as well (but we are in
+     academia so we can realy on if someone does not kow it he/she can learn it)
+     · How should the Colab handle the mW/MHz metric so the deck and notebook agree? → Total power + paper FoM line
+
+● Locked in:
+  - Audience: mixed, but taught from the embedded/EE system-design perspective. Bio/clinical attendees are "collected"
+  via good scaffolding; academic norm = self-learn the rest. → two-tier TODO cells: a guided fill-in path everyone can
+  complete, plus optional "go deeper" code that carries the EE framing.
+  - Metric: total power is the spine output; the paper's per-channel/f_Tx FoM is a labeled secondary readout so the live
+  ModulUS 0.6 mW/MHz anchor reproduces.
+
+  Let me persist these decisions so future CLI sessions start aligned, then lay out the build plan.
+
+  Recalled 1 memory, wrote 3 memories (ctrl+o to expand)
+
+● Decisions saved to project memory. Now the build path.
+
+  Proposed sequencing
+
+  PRIMARY ─► Colab notebook (the spine, computed)        ← start here
+              │
+              ├─► then  4 diagram slides (1,4,11,17)      ← visual anchors for the talk
+              └─► then  TODO-cell wording at chosen depth + deck text
+
+  Colab structure I'd build (one model, staged discovery)
+
+  Cell 0  Setup + constants (c, R_ble_max, E_bit, FOM, ρ_vol/ρ_grav, CR2032)
+  Cell 1  system_power(fs,bits,nRx,PRF,D,mode) + battery() + axial_res()
+          → returns total P_avg AND paper FoM (mW / nRx / f_Tx)  [decision #2]
+  Cell 2  ipywidgets sliders; mode ∈ {RF, BWR, features} is the star
+          live readouts: R_dot vs BLE line (red flag), P_avg, battery cm³/g, FoM
+  Cell 3  STAGE 1 — locked at RF, nRx=8, PRF=100: "shrink the battery to fit BLE" → impossible
+  Cell 4  STAGE 2 — unlock mode: the architecture was the problem → feeds slide 17
+  Cell 5  Demo-data: load RF + BWR traces, Welch PSD, confirm ~2.9 / ~0.7 MHz (≈4×)
+  Cell 6  TODO cells (two-tier): (a) R_dot line  (b) spectral ratio  (c) reflection
+  Cell 7  Closing: invert the chain — given wrist budget (3–5 cm³), what survives?
+
+  Two things I'll handle with defensible defaults unless you object:
+
+  1. Demo data doesn't exist yet (live acquisition is at the conference). I'll generate a synthetic RF + analog-envelope
+  trace pair that reproduces the paper's 2.9 MHz / 0.7 MHz means and the two-peak PET-disc echo, behind a clean loader
+  (load_traces(path)) so you drop in the real .npz after the live demo with zero code change.
+  2. Power constants — I'll lock the brief's defaults (E_bit=20e-9 J/bit, FOM=50e-15, ρ_vol=400 Wh/L) and verify the
+  BWR/features path lands near 0.6 mW/MHz so the notebook ties to the paper before I hand it back.
+
+  One question before I start building:
+
+● User answered Claude's questions:
+  ⎿  · Where should I start, and how much do you want to review before I build? → i want to go slow and step by step.
+     lets focus on the code development first. I want you to build a concept first and then review it together with me.
+     In general when implementing I want you to start with a zoomed out view review it together and then zoom in and
+     review with me as well going step by step.
+
+● Understood — and that's a working style I'll keep: zoom out → review together → zoom in → review, step by step. Saving
+  it so it holds across sessions.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+❯ also use tables and ASCI grafics to structure your ideas
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Noted — tables and ASCII to structure ideas (matches your global style anyway).
+
+  Here's the zoomed-out concept of the Colab. No code yet — this is the architecture I want your sign-off on before we
+  zoom in. The whole notebook is one idea: a single function that walks the spine from a physical knob to a battery,
+  wrapped in a discovery you can't escape without changing architecture.
+
+  1. What the notebook is (mental model)
+
+          ┌──────────────────────────────────────────────────────────────┐
+          │   ONE model function = the spine, made executable             │
+          │                                                               │
+    knobs │  f_Tx ─► resolution        (physics: λ, axial res)           │ outputs
+   ───────┼─►  │  └─► fs (Nyquist)  ─► N samples ─► R_dot (data rate)     ├──────►
+          │                                  │                            │
+          │                            mode ─┘ (RF / BWR / features)      │
+          │                                  ▼                            │
+          │            P_adc + P_afe + P_radio + P_mcu + P_pulser = P_avg │
+          │                                  ▼                            │
+          │                    battery: Wh ─► cm³, g  +  FoM (mW/MHz)     │
+          └──────────────────────────────────────────────────────────────┘
+                                    ▲
+                      BLE wall (1 Mbit/s) cuts across R_dot
+                      → the discovery lives here, not in the battery
+
+  Everything else (sliders, staged cells, demo traces) is packaging around this one function.
+
+  2. The single design decision I need from you first
+
+  The brief lists fs as the primary slider. I think that quietly breaks the spine, and I want your call as architect:
+
+  ┌────────────────┬───────────────────────────────────────────┬───────────────────────────────────────────────────┐
+  │                │        Option A — brief as written        │     Option B — f_Tx is the primary knob (my       │
+  │                │                                           │                  recommendation)                  │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Primary slider │ fs (sample rate)                          │ f_Tx (transducer center freq)                     │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Resolution     │ needs a separate f input → disconnected   │ falls out of f_Tx directly (axial_res(f_Tx))      │
+  │                │ from fs                                   │                                                   │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ fs             │ a free knob                               │ derived: fs = k·f_Tx (RF) or k·f_Tx/4 (BWR)       │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ The "4×"       │ caller passes fs=40 vs 5 by hand          │ emerges from mode as the paper's 4× BWR           │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Spine          │ res and data rate look unrelated          │ one unbroken chain res→freq→Nyquist→data          │
+  │ integrity      │                                           │                                                   │
+  ├────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Slider count   │ more knobs, looser story                  │ fewer knobs, tighter causal story                 │
+  └────────────────┴───────────────────────────────────────────┴───────────────────────────────────────────────────┘
+
+  Option A:   [fs] ──► data          [f] ──► resolution      ← two stories
+  Option B:   [f_Tx] ──► resolution ──► fs ──► data          ← ONE story = the spine
+                           (mode bends the fs branch ×¼)
+
+  Option B makes f_Tx the thing students grab, and resolution and data rate move together — which is the entire
+  pedagogical point. fs becomes a displayed consequence, not a knob. Escape route 1 ("lower f_Tx") then literally moves
+  the resolution readout in real time.
+
+  3. Inputs / outputs at a glance (under Option B)
+
+  ┌──────┬─────────────────────┬────────────────────────────────────────┐
+  │ Knob │        Range        │                  Role                  │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ f_Tx │ 1–15 MHz            │ primary — drives resolution and fs     │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ mode │ RF / BWR / features │ the star — bends fs and R_dot          │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ nRx  │ 1, 8, 16, 32        │ parallelism multiplier on data + power │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ PRF  │ 25–1000 Hz          │ temporal resolution; duty cycle        │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ D    │ 1–6 cm              │ depth → acquisition window → N         │
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ bits │ 8/10/12/14          │ ADC resolution → P_adc, R_dot          │
+  └──────┴─────────────────────┴────────────────────────────────────────┘
+
+  ┌───────────────────┬─────────────────────────┬────────────────────────────┐
+  │      Output       │         Meaning         │      Pedagogical hook      │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ axial_res         │ mm                      │ escape route 1 cost        │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ R_dot vs BLE line │ bit/s, red if > 1e6     │ the wall                   │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ P_avg + breakdown │ mW, stacked bar         │ radio dominates streaming  │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ battery cm³ / g   │ vs CR2032, wrist budget │ wearability verdict        │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  ├──────┼─────────────────────┼────────────────────────────────────────┤
+  │ bits │ 8/10/12/14          │ ADC resolution → P_adc, R_dot          │
+  └──────┴─────────────────────┴────────────────────────────────────────┘
+
+  ┌───────────────────┬─────────────────────────┬────────────────────────────┐
+  │      Output       │         Meaning         │      Pedagogical hook      │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ axial_res         │ mm                      │ escape route 1 cost        │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ R_dot vs BLE line │ bit/s, red if > 1e6     │ the wall                   │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ P_avg + breakdown │ mW, stacked bar         │ radio dominates streaming  │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ battery cm³ / g   │ vs CR2032, wrist budget │ wearability verdict        │
+  ├───────────────────┼─────────────────────────┼────────────────────────────┤
+  │ FoM               │ mW / nRx / f_Tx         │ ties to paper's 0.6 mW/MHz │
+  └───────────────────┴─────────────────────────┴────────────────────────────┘
+
+  4. The notebook as a state machine (the discovery)
+
+   STAGE 1 ───────────► STAGE 2 ───────────► INVERT
+   mode LOCKED=RF       unlock mode          give wrist budget (3–5 cm³)
+   "shrink battery      "oh — architecture   "what f_Tx/bits/nRx/mode
+    to fit BLE"          was the problem"      survives?"  → slide 17
+          │                   │                      │
+          ▼                   ▼                      ▼
+     impossible          features/BWR           design, not
+     (R_dot ≫ 1Mb/s)     clear the wall         calculate
+
+  5. Scope guardrails (what it is / isn't)
+
+  ┌────────────────────────────────────────────────┬──────────────────────────────────────────┐
+  │                       Is                       │                  Isn't                   │
+  ├────────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ First-order, defensible, ties to paper anchors │ SPICE / datasheet-accurate               │
+  ├────────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ One model fn + widgets + 3 staged cells        │ build-from-scratch                       │
+  ├────────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Synthetic demo traces behind a clean loader    │ dependent on live-demo data existing yet │
+  ├────────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Reproduces ~0.6 mW/MHz & 4× before handoff     │ a research-grade power simulator         │
+  └────────────────────────────────────────────────┴──────────────────────────────────────────┘
+
+  ---
+  Your call before I zoom in: Option A or B for the primary knob? Once that's settled I'll zoom into level 2 — the exact signature and internals of the model function — and we review that together before any widgets.
+
+✻ Cogitated for 3m 50s
+
+❯ this alows me a easier and more eductaed decision
+
+● Good — that's exactly the intent of the zoom-out. The A/B choice is the one structural fork that shapes everything downstream, so let's lock it before zooming in.
+
+● User declined to answer questions
+  ⎿  · Primary knob for the Colab model — which spine wiring? (Option B — f_Tx primary / Option A — fs primary)
+
+● You'd like to clarify something before deciding. What would you like to dig into — the A/B choice itself, or something upstream of it?
+
+  A few things I can expand on if useful:
+
+  ┌─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Possible clarification  │                                                     What I'd address                                                      │
+  ├─────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Physics of Option B     │ Why fs = k·f_Tx and why BWR gives the ÷4 — the Nyquist + bandwidth reasoning, with the paper's 2.9→0.7 MHz as the anchor  │
+  ├─────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ f_Tx vs fs distinction  │ The difference between transducer center frequency and ADC sample rate, and why conflating them is the usual student trap │
+  ├─────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Pedagogical consequence │ How each option feels when a student drags the slider in front of the room                                                │
+  ├─────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Is it even either/or?   │ A hybrid: f_Tx primary, with fs exposed as a read-only display (or an "expert" override for the EE tier)                  │
+  └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Tell me what to clarify and I'll reformulate.
+
+✻ Churned for 17s
+
+❯ I am not sure what R_dot is
+
+● R_dot is just my shorthand for data rate — the bits per second the system has to move off the front end (store or, worse, transmit over BLE). The "dot" is the physics convention for a per-time rate (like ẋ = velocity). So R = data, Ṙ = data per second. I'll rename it to
+  data_rate in the actual code — the symbol was needless jargon.
+
+  Where it comes from
+
+   one A-line (one pulse-echo):
+     t_acq = 2·D / c          round-trip time to depth D and back
+     N     = fs · t_acq       how many samples that window holds
+     bits per A-line = N · bits
+
+   now repeat in time and across channels:
+     R_dot = N · bits · PRF · nRx
+              │     │     │     └─ nRx parallel receive channels
+              │     │     └─────── PRF = how many A-lines per second
+              │     └───────────── bits per sample (ADC resolution)
+              └─────────────────── samples per A-line
+          = bits/second the radio (or storage) must carry
+
+  A concrete number (why it matters)
+
+  ┌────────────────────┬─────────────────────────────────┬───────────────────────────────┐
+  │      Quantity      │              Value              │             Note              │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ D (depth)          │ 3 cm                            │ → t_acq = 2·0.03/1540 ≈ 39 µs │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ fs (RF mode)       │ 40 Msps                         │ full-bandwidth digitization   │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ N = fs·t_acq       │ ≈ 1560 samples                  │ per A-line                    │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ bits               │ 12                              │                               │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ PRF                │ 100 Hz                          │                               │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ nRx                │ 8                               │                               │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ R_dot              │ 1560 · 12 · 100 · 8 ≈ 15 Mbit/s │                               │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ BLE usable ceiling │ ~1 Mbit/s                       │                               │
+  └────────────────────┴─────────────────────────────────┴───────────────────────────────┘
+
+     R_dot = 15 Mbit/s
+     ─────────────────────────────────────────────█████  ← way over
+     BLE wall ~1 Mbit/s
+     ──────█
+
+  That 15× overshoot is the discovery. No battery makes 15 Mbit/s fit through a 1 Mbit/s pipe — you must change the architecture (the mode):
+
+  ┌──────────┬──────────────────────────────────────────────┬───────────────────────────────────┐
+  │   mode   │                 what changes                 │           R_dot effect            │
+  ├──────────┼──────────────────────────────────────────────┼───────────────────────────────────┤
+  │ RF       │ send every sample                            │ baseline (15 Mbit/s) — breaks BLE │
+  ├──────────┼──────────────────────────────────────────────┼───────────────────────────────────┤
+  │ BWR      │ analog envelope first → fs ÷4 → N ÷4         │ ~4× smaller, ModulUS path         │
+  ├──────────┼──────────────────────────────────────────────┼───────────────────────────────────┤
+  │ features │ send 16 numbers per A-line, not 1560 samples │ collapses ~100–1000×              │
+  └──────────┴──────────────────────────────────────────────┴───────────────────────────────────┘
+
+  So R_dot is the single number that decides whether your wearable architecture can even exist on a wireless link. Does that clear it up — and want me to rename it data_rate everywhere for the workshop audience?
+
+✻ Brewed for 15s
+
+❯ i would go for one connected story
+
+● Decision locked: Option B — one connected story (f_Tx primary, fs and resolution derived). And I'll rename R_dot → data_rate for the audience. Recording both.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Now we zoom in one level — from "the notebook is one function" to what that function actually computes. Still spec, not code. Review this with me, then I'll write the cell.
+
+  Level 2 — the model function, end to end
+
+   INPUTS (knobs)                DERIVED CHAIN                         OUTPUTS
+   ──────────────               ───────────────                       ───────
+   f_Tx ───────────┬──► λ = c/f_Tx ──► axial_res = n·λ/2 ─────────────► res [mm]
+                   │
+                   └──► fs = k·f_Tx · (¼ if BWR/features) ─────────────► fs [Msps]
+                               │
+   D ──► t_acq = 2D/c ─────────┴──► N = fs·t_acq ─────────────────────► N [samp]
+                                          │
+   bits, PRF, nRx, mode ──────────────────┴──► data_rate ─────────────► bit/s  vs BLE wall
+                                                    │
+                              ┌─────────────────────┴───────────────┐
+                              ▼         ▼          ▼        ▼        ▼
+                            P_adc   P_afe     P_radio   P_mcu   P_pulser
+                              └─────────┴────────┬───────┴────────┘
+                                                 ▼
+                                    P_avg ──► battery [cm³, g] + FoM [mW/MHz]
+
+  The two mode-dependent branches (this is the whole lesson)
+
+  ┌──────────┬──────────┬─────────────────────┬─────────────────────────────────────────────────┐
+  │   mode   │    fs    │      data_rate      │           what's physically happening           │
+  ├──────────┼──────────┼─────────────────────┼─────────────────────────────────────────────────┤
+  │ RF       │ k·f_Tx   │ N·bits·PRF·nRx      │ digitize every sample of the raw echo           │
+  ├──────────┼──────────┼─────────────────────┼─────────────────────────────────────────────────┤
+  │ BWR      │ k·f_Tx/4 │ N·bits·PRF·nRx      │ analog envelope first → ¼ the samples (ModulUS) │
+  ├──────────┼──────────┼─────────────────────┼─────────────────────────────────────────────────┤
+  │ features │ k·f_Tx/4 │ n_feat·bits·PRF·nRx │ send 16 numbers, not the waveform               │
+  └──────────┴──────────┴─────────────────────┴─────────────────────────────────────────────────┘
+
+   RF        ████████████████  fs high,  data = full waveform
+   BWR       ████              fs ÷4,    data = full (smaller) waveform
+   features  ▌                 fs ÷4,    data decoupled from N entirely
+
+  Power blocks (first-order, each defensible)
+
+  ┌──────────┬──────────────────────────────┬────────────────┬─────────────────────────────────┐
+  │  Block   │       Formula (sketch)       │     Driver     │         Dominates when          │
+  ├──────────┼──────────────────────────────┼────────────────┼─────────────────────────────────┤
+  │ P_adc    │ FOM·2^bits·fs·duty·nRx       │ Walden         │ high fs / bits                  │
+  ├──────────┼──────────────────────────────┼────────────────┼─────────────────────────────────┤
+  │ P_afe    │ P_on·duty·nRx + leak         │ analog on-time │ many channels                   │
+  ├──────────┼──────────────────────────────┼────────────────┼─────────────────────────────────┤
+  │ P_radio  │ data_rate·E_bit              │ bits sent      │ streaming RF — the usual winner │
+  ├──────────┼──────────────────────────────┼────────────────┼─────────────────────────────────┤
+  │ P_mcu    │ P_idle (+P_feat if features) │ compute        │ features mode                   │
+  ├──────────┼──────────────────────────────┼────────────────┼─────────────────────────────────┤
+  │ P_pulser │ ~const, low duty             │ Tx             │ ~never (Tx is cheap)            │
+  └──────────┴──────────────────────────────┴────────────────┴─────────────────────────────────┘
+
+  duty = t_acq · PRF (active fraction). P_avg = Σ blocks.
+
+  Outputs returned (one dict)
+
+  ┌───────────────────────┬─────────────┬─────────────────────────────┐
+  │         Field         │    Unit     │            Feeds            │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ axial_res             │ mm          │ escape-route-1 cost readout │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ fs, N                 │ Msps, samp  │ "look what f_Tx did"        │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ data_rate, fits_ble   │ bit/s, bool │ the BLE wall                │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ P_adc…P_pulser, P_avg │ mW          │ stacked power bar           │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ vol_cm3, mass_g       │ cm³, g      │ vs CR2032 / wrist budget    │
+  ├───────────────────────┼─────────────┼─────────────────────────────┤
+  │ FoM                   │ mW/MHz      │ ties to paper's 0.6         │
+  └───────────────────────┴─────────────┴─────────────────────────────┘
+
+  ---
+  Two sub-decisions before I write the cell
+
+  (1) Oversampling factor k. I propose k = 4 so the defaults line up with both the brief and the hardware:
+
+   f_Tx = 10 MHz, RF :  fs = 4·10      = 40 Msps   ✓ brief RF default
+   f_Tx = 10 MHz, BWR:  fs = 4·10 / 4  =  5 Msps   ✓ STM32L496 on-chip ADC
+
+  This is clean: the paper's real 5 Msps ADC is the BWR operating point. Good enough, or do you want k exposed as a constant to tune?
+
+  (2) A second wall — the on-chip ADC ceiling? The STM32L496 ADC tops out at 5 Msps. In RF mode fs = 40 Msps blows past it → you're forced to an external fast ADC + FPGA (LVDS/JESD), which is exactly the MCU-vs-FPGA / power-volume penalty in Table I.
+
+     RF mode:  fs = 40 Msps  ──►  exceeds on-chip 5 Msps  ──►  needs FPGA path
+     BWR mode: fs =  5 Msps  ──►  fits on-chip ADC        ──►  stays MCU/wearable
+
+  ┌──────────────────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                  Option                  │                                           Effect                                           │
+  ├──────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Add the ADC ceiling as a second red flag │ reinforces why BWR enables the MCU/wearable class; ties model to Table I; small extra code │
+  ├──────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Leave it out                             │ keeps the notebook focused on the single BLE wall; less to explain in 30 min               │
+  └──────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  My lean: add it — it's the bridge from "data rate" to "why ModulUS is an MCU and TinyProbe is an FPGA," and it costs one comparison + one flag. Your call on both.
+
+✻ Cogitated for 55s
+
+※ recap: We're building the CEEUS 2026 workshop Colab: a power/battery model walking the spine from f_Tx to battery size. I've specced the model function and need your sign-off on two choices: oversampling factor k=4, and whether to add a second wall for the 5 Msps on-chip ADC
+  ceiling. (disable recaps in /config)
+
+❯ a couple of notes and suggestions: 1. lean on really placative examples eg. resolution what is the size of the wave length and do i resolve an elephant or a cell (maybe also giving images) or for the battery do i need a tiny cell or an atomic power plant. if possible give
+  images (with references!) In general if you use achknowledged values you need to cite them or discuss with me where you want to take them from. (2) I will acquire RF and envelope data with modulus and provide it to the students.
+
+● Both noted and both improve the design. Let me fold them in, then surface the value-provenance question they raise — because your "cite or discuss" rule touches almost every constant in the model.
+
+  1. Placative anchors — the scale ladders
+
+  These become the emotional spine: the student feels the number before they compute it.
+
+  Resolution ladder (λ = c/f, axial res = n·λ/2, n=5):
+
+  ┌─────────────────────────────┬──────────┬───────────┬─────────────────────────────────────────┬─────────────────────────────────────┐
+  │            f_Tx             │    λ     │ axial res │          "what can I resolve?"          │            anchor object            │
+  ├─────────────────────────────┼──────────┼───────────┼─────────────────────────────────────────┼─────────────────────────────────────┤
+  │ 1 MHz                       │ 1.54 mm  │ ~3.9 mm   │ organs, big vessels                     │ a grape                             │
+  ├─────────────────────────────┼──────────┼───────────┼─────────────────────────────────────────┼─────────────────────────────────────┤
+  │ 5 MHz                       │ 0.31 mm  │ ~0.77 mm  │ the paper's 0.7 mm disc (barely)        │ a sesame seed                       │
+  ├─────────────────────────────┼──────────┼───────────┼─────────────────────────────────────────┼─────────────────────────────────────┤
+  │ 10 MHz                      │ 0.154 mm │ ~0.38 mm  │ resolves the PET disc; a hair ≈ 0.07 mm │ a human hair                        │
+  ├─────────────────────────────┼──────────┼───────────┼─────────────────────────────────────────┼─────────────────────────────────────┤
+  │ 15 MHz                      │ 0.103 mm │ ~0.26 mm  │ skin layers, small vessels              │ a dust mite                         │
+  ├─────────────────────────────┼──────────┼───────────┼─────────────────────────────────────────┼─────────────────────────────────────┤
+  │ → GHz (acoustic microscopy) │ µm       │ µm        │ a single cell (~10 µm)                  │ — (off our chart; nod to Costa/AFM) │
+  └─────────────────────────────┴──────────┴───────────┴─────────────────────────────────────────┴─────────────────────────────────────┘
+
+    elephant   organ    disc/seed   hair    cell
+     ░░░░░     ▓▓▓▓      ▒▒▒          ▪        ·
+     3 m       cm        mm          0.1mm    10µm
+     ◄──────────  raise f_Tx, shrink λ  ──────────►
+     ◄──────────  but data_rate explodes ─────────►   ← the catch
+  The catch is the whole point: the wavelength that lets you see the hair is the same physics that floods your radio.
+
+  Battery / power ladder (Wh → volume; CR2032 = the unit):
+
+  ┌────────────────┬──────────────────────┬────────────────────────┬──────────────────────────────────────────────────────┐
+  │ streaming mode │ P_avg (illustrative) │     1-day battery      │                     "what size?"                     │
+  ├────────────────┼──────────────────────┼────────────────────────┼──────────────────────────────────────────────────────┤
+  │ features       │ ~few mW              │ a fraction of a CR2032 │ coin cell                                            │
+  ├────────────────┼──────────────────────┼────────────────────────┼──────────────────────────────────────────────────────┤
+  │ BWR            │ ~10s mW              │ ~CR2032 (0.65 Wh)      │ watch battery                                        │
+  ├────────────────┼──────────────────────┼────────────────────────┼──────────────────────────────────────────────────────┤
+  │ RF, 1 ch       │ ~100s mW             │ AA-ish                 │ won't fit a wrist                                    │
+  ├────────────────┼──────────────────────┼────────────────────────┼──────────────────────────────────────────────────────┤
+  │ RF, 8 ch       │ watts                │ phone/car territory    │ "atomic power plant" hyperbole = the joke that lands │
+  └────────────────┴──────────────────────┴────────────────────────┴──────────────────────────────────────────────────────┘
+
+  Plus the real anti-example: ModulUS = 260×115×40 mm ≈ 1196 cm³ — a brick, deliberately, because it's a sandbox not a wearable (your paper's own framing).
+
+  2. Images (with references) — proposed plan, not yet fetched
+
+  I won't fabricate image URLs or citations. When we build slides/Colab markdown I'll source each from a citable origin and you approve it. Candidate set:
+
+  ┌───────────────────┬────────────────────────────┬─────────────────────────────────────────────────┐
+  │      Anchor       │         Image idea         │        Likely citable source (to verify)        │
+  ├───────────────────┼────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Wavelength→object │ scale strip hair/seed/cell │ Wikimedia Commons (PD/CC) — cite file + license │
+  ├───────────────────┼────────────────────────────┼─────────────────────────────────────────────────┤
+  │ PET-disc echo     │ your Fig. 3                │ the ModulUS paper itself (cleanest, self-owned) │
+  ├───────────────────┼────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Battery size      │ CR2032 vs AA vs phone      │ manufacturer datasheet photo or Commons         │
+  ├───────────────────┼────────────────────────────┼─────────────────────────────────────────────────┤
+  │ ModulUS brick     │ your Fig. 2 photo          │ your paper                                      │
+  └───────────────────┴────────────────────────────┴─────────────────────────────────────────────────┘
+
+  Leaning on your own figures wherever possible sidesteps licensing and keeps it self-consistent. Want me to use WebSearch to pull + cite the external ones when we reach that step?
+
+  3. The value-provenance question (your "cite or discuss" rule)
+
+  Every standard constant in the model needs a home. Here's the full ledger with my proposed source and a status flag — the three ⚠ ones are soft and I want your steer:
+
+  ┌──────────────────────────────┬──────────────────────────────┬───────────────────────────────────────────────────────────────┬───────────────────────┐
+  │           Constant           │            Value             │                      Proposed provenance                      │        Status         │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ c (soft tissue)              │ 1540 m/s                     │ textbook standard; your paper already uses it                 │ ✓ solid               │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ axial res = nλ/2             │ —                            │ O'Brien 2007 (your ref [16])                                  │ ✓ reuse paper         │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ Walden ADC FoM               │ ~50 fJ/conv-step             │ Walden 1999 / Murmann ADC survey                              │ ⚠ pick canonical cite │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ BLE energy/bit E_bit         │ 10–50 nJ/bit                 │ squishy — vendor app notes or your ModulUS/NRF53 measurement? │ ⚠ your call           │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ BLE usable ceiling           │ ~1 Mbit/s                    │ Bluetooth SIG / Nordic app note (2M PHY app-layer)            │ ⚠ pick cite           │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ Li energy density (vol/grav) │ 250–500 Wh/L / 200–250 Wh/kg │ a battery review paper                                        │ ⚠ pick cite           │
+  ├──────────────────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────────┼───────────────────────┤
+  │ CR2032 energy                │ ~0.65 Wh                     │ Energizer/Panasonic datasheet                                 │ ✓ datasheet           │
+  └──────────────────────────────┴──────────────────────────────┴───────────────────────────────────────────────────────────────┴───────────────────────┘
+
+  My recommendation: measure what you can, cite the rest. Specifically — E_bit and the BLE ceiling are exactly the numbers your NRF53 on ModulUS can give you empirically, which would be far stronger than a vendor figure and makes the Colab your data end-to-end. Do you have (or
+  can you grab) a measured BLE throughput + energy-per-bit from ModulUS, or should I cite vendor numbers as placeholders we swap later?
+
+  4. Data plan (updated for your note 2)
+
+   You acquire RF + envelope on ModulUS  ──►  provide to students
+                                                │
+     loader: load_traces(path) ──────────────────┤  swap-in, zero code change
+                                                │
+     dev stub (clearly labeled SYNTHETIC) ───────┘  only until your real file lands
+  So: real ModulUS traces are the source of truth; I keep a labeled synthetic stub only so the notebook runs while you're acquiring. Spectral-check TODO confirms your real ~2.9 / ~0.7 MHz means.
+
+  ---
+  Still open (carried from last turn + new)
+
+  ┌─────┬────────────────────────────────────────────────────────────┬──────────────────────────────┐
+  │  #  │                          Decision                          │           My lean            │
+  ├─────┼────────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │ a   │ Oversampling k = 4 (ties 10 MHz→40/5 Msps)                 │ yes, as a tunable constant   │
+  ├─────┼────────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │ b   │ Add on-chip ADC 5 Msps ceiling as 2nd wall                 │ yes — bridges to MCU-vs-FPGA │
+  ├─────┼────────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │ c   │ E_bit + BLE ceiling: measure on ModulUS vs cite vendor     │ prefer measure               │
+  ├─────┼────────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │ d   │ External images: I source+cite via WebSearch at build time │ your ok                      │
+  └─────┴────────────────────────────────────────────────────────────┴──────────────────────────────┘
+
+  Want to settle a–d, or discuss any further before I write the first code cell (the model function)?
+
+✻ Crunched for 1m 11s
+
+❯ ok
+
+● Taking "ok" as: proceed with my leans on a–d — k=4 tunable, add the 5 Msps on-chip ADC ceiling as a second wall, E_bit/BLE as cited placeholders you'll swap for measured NRF53 values, and I source external images at build time. Say the word if I misread any.
+
+  Now the zoom-in to level 3: the actual model function. I'm showing it here for review before I commit it to the .ipynb, per our stepwise rhythm. Provenance is baked in as comments — ⚠ marks the values still needing a citation or your measurement.
+
+  # ════════════════════════════════════════════════════════════════════════
+  #  ModulUS power/battery model — the spine, made executable
+  #  f_Tx is the ONE primary knob; fs and resolution are DERIVED (Option B).
+  # ════════════════════════════════════════════════════════════════════════
+
+  # ── Constants (provenance flagged) ──────────────────────────────────────
+  C_SOUND    = 1540.0    # m/s   soft-tissue speed of sound [used in ModulUS paper; Szabo, Diagnostic US]
+  N_CYCLES   = 5         # –     excitation pulse length     [ModulUS exp. setup]
+  K_OS       = 4         # –     RF oversampling: fs = K_OS·f_Tx  → 10 MHz→40 Msps
+  BWR_FACTOR = 4         # –     analog BW reduction          [ModulUS: 2.9→0.7 MHz mean]
+
+  ADC_FOM       = 50e-15 # J/conv-step  Walden FoM            ⚠ cite TBD (Walden'99 / Murmann survey)
+  FS_ONCHIP_MAX = 5e6    # samp/s  STM32L496 on-chip ADC ceiling [ModulUS / ST datasheet]
+
+  E_BIT      = 20e-9     # J/bit  effective BLE energy        ⚠ PLACEHOLDER → measure on NRF53
+  R_BLE_MAX  = 1e6       # bit/s  usable BLE throughput        ⚠ cite/measure TBD
+
+  RHO_VOL    = 400.0     # Wh/L   Li-ion volumetric density    ⚠ cite TBD
+  RHO_GRAV   = 230.0     # Wh/kg  Li-ion gravimetric density   ⚠ cite TBD
+  CR2032_WH  = 0.65      # Wh     reference coin cell          [coin-cell datasheet]
+  N_FEATURES = 16        # –      features-mode payload / A-line
+
+
+  def axial_res(f_Tx, n_cycles=N_CYCLES, c=C_SOUND):
+      """Axial resolution = half the spatial pulse length. Depends ONLY on f_Tx
+      and pulse length — NOT on mode. (BWR keeps resolution; it only drops fs.)"""
+      lam = c / f_Tx                       # wavelength [m]
+      return n_cycles * lam / 2.0          # [m]
+
+
+  def sample_rate(f_Tx, mode):
+      """Derived, not chosen. RF digitizes the full echo; BWR/features digitize
+      the analog envelope at 1/BWR_FACTOR the rate (the ModulUS trick)."""
+      fs_rf = K_OS * f_Tx                  # full-bandwidth Nyquist-with-margin
+      return fs_rf if mode == "RF" else fs_rf / BWR_FACTOR
+
+
+  def system_power(f_Tx, bits, nRx, PRF, D, mode,
+                   c=C_SOUND, FOM=ADC_FOM, E_bit=E_BIT,
+                   P_afe_on=3e-3, P_afe_leak=50e-6,
+                   P_pulser=1e-3, P_idle=1e-3, P_feat=2e-3,
+                   n_features=N_FEATURES):
+      fs     = sample_rate(f_Tx, mode)
+      t_acq  = 2 * D / c                    # round-trip window [s]
+      N      = fs * t_acq                   # samples per A-line
+      duty   = t_acq * PRF                  # active fraction
+
+      if mode == "features":
+          data_rate = n_features * bits * PRF * nRx     # decoupled from N
+      else:                                              # RF or BWR (differ via fs→N)
+          data_rate = N * bits * PRF * nRx
+
+      P_adc   = FOM * (2**bits) * fs * duty * nRx        # Walden, ENOB≈bits (1st order)
+      P_afe   = P_afe_on * duty * nRx + P_afe_leak
+      P_radio = data_rate * E_bit                        # usually the winner when streaming
+      P_mcu   = P_idle + (P_feat if mode == "features" else 0.0)
+      P_avg   = P_pulser + P_adc + P_afe + P_radio + P_mcu
+
+      return dict(
+          fs=fs, N=N, duty=duty, data_rate=data_rate,
+          axial_res_mm=axial_res(f_Tx, c=c) * 1e3,
+          P_adc=P_adc, P_afe=P_afe, P_radio=P_radio,
+          P_mcu=P_mcu, P_pulser=P_pulser, P_avg=P_avg,
+          fits_ble    = data_rate <= R_BLE_MAX,          # wall 1: the radio
+          fits_onchip = fs <= FS_ONCHIP_MAX,             # wall 2: the ADC → MCU-vs-FPGA
+      )
+
+
+  def battery(P_avg, days=1, rho_vol=RHO_VOL, rho_grav=RHO_GRAV):
+      Wh = P_avg * 86400 * days / 3600.0
+      return dict(Wh=Wh, vol_cm3=Wh / rho_vol * 1000.0,
+                  mass_g=Wh / rho_grav * 1000.0,
+                  n_cr2032=Wh / CR2032_WH)               # battery in "coin-cell units"
+
+
+  def fom_mw_per_mhz(P_avg_mW, nRx, f_Tx_Hz):
+      """Paper's figure of merit: avg power per Rx channel, normalized by f_Tx.
+      Lets the live ModulUS number land near 0.6 mW/MHz (Table I)."""
+      return P_avg_mW / nRx / (f_Tx_Hz / 1e6)
+
+  How it maps to what we agreed:
+
+  ┌─────────────────────────────────┬─────────────────────────────────────────────────┐
+  │          Design point           │                 Where it lives                  │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ f_Tx is the one knob (Option B) │ sample_rate() + axial_res() both derive from it │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ 4× BWR emerges, not hand-set    │ BWR_FACTOR inside sample_rate                   │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ BLE wall                        │ fits_ble                                        │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ 2nd wall → MCU-vs-FPGA          │ fits_onchip (5 Msps)                            │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ total power → battery           │ system_power → battery                          │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ paper FoM secondary line        │ fom_mw_per_mhz                                  │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ battery in coin-cell units      │ n_cr2032                                        │
+  ├─────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ R_dot renamed                   │ data_rate                                       │
+  └─────────────────────────────────┴─────────────────────────────────────────────────┘
+
+  Two things to flag before you sign off:
+
+  1. The P_afe_*, P_pulser, P_idle, P_feat defaults (3 mW AFE-on, 1 mW pulser, etc.) are first-order placeholders. Same provenance question as E_bit: cite or measure? These are also candidates for ModulUS-measured values if you have them.
+  2. Before we go further I want to sanity-run the defaults and confirm BWR/features lands near 0.6 mW/MHz and RF blows the BLE wall — so we're building on numbers that tie to the paper. Want me to run that check now?
+
+✻ Cooked for 57s
+
+❯ i would use a reference value form literature there is no BLE on ModulUS (that is an extra element but not in the sandbox)
+
+● Got it — that's an important correction. BLE is not part of the ModulUS sandbox; it's a downstream element. So BLE numbers (E_bit, throughput ceiling) come from literature, cited — not from ModulUS. That actually gives a clean provenance split, which I'll record.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Recorded. Here's the corrected provenance ledger with the in/out-of-sandbox split:
+
+  ┌─────────────────────────────────────┬─────────────┬──────────────────────────────────┐
+  │              Constant               │ In sandbox? │           Source type            │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ pulser, AFE, on-chip ADC, MCU power │ ✓ in        │ ModulUS-measured or ST datasheet │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ c = 1540 m/s, axial res = nλ/2      │ ✓ (paper)   │ reuse paper (O'Brien 2007)       │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ E_bit (BLE energy/bit)              │ ✗ out       │ literature, cited                │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ R_BLE_MAX (throughput ceiling)      │ ✗ out       │ literature, cited                │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Walden ADC FoM                      │ —           │ literature (Walden/Murmann)      │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Li energy density, CR2032           │ —           │ review paper / datasheet         │
+  └─────────────────────────────────────┴─────────────┴──────────────────────────────────┘
+
+  So I'll change the two BLE comments in the code from "measure on NRF53" to "literature, cited," and we lock the actual numbers + references before they appear on a slide.
+
+  Candidate references I'd propose for the two BLE values (real, well-cited — but I'll verify exact figures before quoting, not assert from memory):
+
+  ┌────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                         Value                          │                                        Candidate source                                        │
+  ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BLE usable throughput (~0.7–1.4 Mbit/s, PHY-dependent) │ Gomez et al., Sensors 2012, "Overview and Evaluation of BLE"; Tosi et al., Sensors 2017 survey │
+  ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BLE energy/bit                                         │ Siekkinen et al. 2012, "How Low Energy is Bluetooth Low Energy?"                               │
+  └────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Two ways forward — your call on order:
+
+  ┌─────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │       Option        │                                                               What I do                                                               │
+  ├─────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Lock BLE refs first │ WebSearch those papers, pull exact throughput + energy/bit figures with citations, set E_bit and R_BLE_MAX to defensible cited values │
+  ├─────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Sanity-run first    │ Run the model with current placeholders, confirm BWR/features ≈ 0.6 mW/MHz and RF breaks the wall, then refine the BLE constants      │
+  └─────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  I lean sanity-run first — it tells us whether the model structure is sound before we spend effort sourcing exact constants (placeholders are fine for a structural check). Then lock the literature. Which do you want?
+
+✻ Crunched for 50s
+
+※ recap: We're building the CEEUS 2026 workshop Colab that models wearable-ultrasound power and battery from f_Tx down the spine. The model function is drafted and approved in concept. Next: sanity-run the defaults to confirm BWR/features lands near 0.6 mW/MHz and RF breaks the
+  BLE wall. (disable recaps in /config)
+
+❯ ok
+
+● Running the sanity check now. Writing the model to a file so we can iterate on it, with a __main__ block that exercises the operating points.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Create file
+ modulus_model.py
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+   1 """ModulUS power/battery model — structural sanity check (pre-notebook).
+   2 f_Tx is the ONE primary knob; fs and resolution are DERIVED (Option B).
+   3 Constants are first-order placeholders; BLE values are literature-sourced (TBD)."""
+   4
+   5 # ── Constants (provenance flagged) ──────────────────────────────────────
+   6 C_SOUND    = 1540.0    # m/s   soft-tissue speed of sound [ModulUS paper; Szabo]
+   7 N_CYCLES   = 5         # –     excitation pulse length     [ModulUS exp. setup]
+   8 K_OS       = 4         # –     RF oversampling: fs = K_OS*f_Tx  -> 10 MHz->40 Msps
+   9 BWR_FACTOR = 4         # –     analog BW reduction          [ModulUS: 2.9->0.7 MHz]
+  10
+  11 ADC_FOM       = 50e-15 # J/conv-step  Walden FoM            [cite TBD]
+  12 FS_ONCHIP_MAX = 5e6    # samp/s  STM32L496 on-chip ADC ceiling [ST datasheet]
+  13
+  14 E_BIT      = 20e-9     # J/bit  effective BLE energy        [literature, cite TBD]
+  15 R_BLE_MAX  = 1e6       # bit/s  usable BLE throughput        [literature, cite TBD]
+  16
+  17 RHO_VOL    = 400.0     # Wh/L   Li-ion volumetric density    [cite TBD]
+  18 RHO_GRAV   = 230.0     # Wh/kg  Li-ion gravimetric density   [cite TBD]
+  19 CR2032_WH  = 0.65      # Wh     reference coin cell          [datasheet]
+  20 N_FEATURES = 16        # –      features-mode payload / A-line
+  21
+  22
+  23 def axial_res(f_Tx, n_cycles=N_CYCLES, c=C_SOUND):
+  24     lam = c / f_Tx
+  25     return n_cycles * lam / 2.0          # [m]
+  26
+  27
+  28 def sample_rate(f_Tx, mode):
+  29     fs_rf = K_OS * f_Tx
+  30     return fs_rf if mode == "RF" else fs_rf / BWR_FACTOR
+  31
+  32
+  33 def system_power(f_Tx, bits, nRx, PRF, D, mode,
+  34                  c=C_SOUND, FOM=ADC_FOM, E_bit=E_BIT,
+  35                  P_afe_on=3e-3, P_afe_leak=50e-6,
+  36                  P_pulser=1e-3, P_idle=1e-3, P_feat=2e-3,
+  35                  P_afe_on=3e-3, P_afe_leak=50e-6,
+  36                  P_pulser=1e-3, P_idle=1e-3, P_feat=2e-3,
+
+✻ Cooked for 57s
+
+❯ i would use a reference value form literature there is no BLE on ModulUS (that is an extra element but not in the sandbox)
+
+● Got it — that's an important correction. BLE is not part of the ModulUS sandbox; it's a downstream element. So BLE numbers (E_bit, throughput ceiling) come from literature, cited — not from ModulUS. That actually gives a clean provenance split, which I'll record.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Recorded. Here's the corrected provenance ledger with the in/out-of-sandbox split:
+
+  ┌─────────────────────────────────────┬─────────────┬──────────────────────────────────┐
+  │              Constant               │ In sandbox? │           Source type            │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ pulser, AFE, on-chip ADC, MCU power │ ✓ in        │ ModulUS-measured or ST datasheet │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ c = 1540 m/s, axial res = nλ/2      │ ✓ (paper)   │ reuse paper (O'Brien 2007)       │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ E_bit (BLE energy/bit)              │ ✗ out       │ literature, cited                │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ R_BLE_MAX (throughput ceiling)      │ ✗ out       │ literature, cited                │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Walden ADC FoM                      │ —           │ literature (Walden/Murmann)      │
+  ├─────────────────────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Li energy density, CR2032           │ —           │ review paper / datasheet         │
+  └─────────────────────────────────────┴─────────────┴──────────────────────────────────┘
+
+  So I'll change the two BLE comments in the code from "measure on NRF53" to "literature, cited," and we lock the actual numbers + references before they appear on a slide.
+
+  Candidate references I'd propose for the two BLE values (real, well-cited — but I'll verify exact figures before quoting, not assert from memory):
+
+  ┌────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                         Value                          │                                        Candidate source                                        │
+  ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BLE usable throughput (~0.7–1.4 Mbit/s, PHY-dependent) │ Gomez et al., Sensors 2012, "Overview and Evaluation of BLE"; Tosi et al., Sensors 2017 survey │
+  ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BLE energy/bit                                         │ Siekkinen et al. 2012, "How Low Energy is Bluetooth Low Energy?"                               │
+  └────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Two ways forward — your call on order:
+
+  ┌─────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │       Option        │                                                               What I do                                                               │
+  ├─────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Lock BLE refs first │ WebSearch those papers, pull exact throughput + energy/bit figures with citations, set E_bit and R_BLE_MAX to defensible cited values │
+  ├─────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Sanity-run first    │ Run the model with current placeholders, confirm BWR/features ≈ 0.6 mW/MHz and RF breaks the wall, then refine the BLE constants      │
+  └─────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  I lean sanity-run first — it tells us whether the model structure is sound before we spend effort sourcing exact constants (placeholders are fine for a structural check). Then lock the literature. Which do you want?
+
+✻ Crunched for 50s
+
+※ recap: We're building the CEEUS 2026 workshop Colab that models wearable-ultrasound power and battery from f_Tx down the spine. The model function is drafted and approved in concept. Next: sanity-run the defaults to confirm BWR/features lands near 0.6 mW/MHz and RF breaks the
+  BLE wall. (disable recaps in /config)
+
+❯ ok
+
+● Running the sanity check now. Writing the model to a file so we can iterate on it, with a __main__ block that exercises the operating points.
+
+● Write(modulus_model.py)
+  ⎿  Wrote 98 lines to modulus_model.py
+      1 """ModulUS power/battery model — structural sanity check (pre-notebook).
+      2 f_Tx is the ONE primary knob; fs and resolution are DERIVED (Option B).
+      3 Constants are first-order placeholders; BLE values are literature-sourced (TBD)."""
+      4
+      5 # ── Constants (provenance flagged) ──────────────────────────────────────
+      6 C_SOUND    = 1540.0    # m/s   soft-tissue speed of sound [ModulUS paper; Szabo]
+      7 N_CYCLES   = 5         # –     excitation pulse length     [ModulUS exp. setup]
+      8 K_OS       = 4         # –     RF oversampling: fs = K_OS*f_Tx  -> 10 MHz->40 Msps
+      9 BWR_FACTOR = 4         # –     analog BW reduction          [ModulUS: 2.9->0.7 MHz]
+     … +88 lines (ctrl+o to expand)
+
+● Bash(py -3.12 modulus_model.py)
+  ⎿  === ModulUS/PuLsE operating point: f_Tx=10MHz, nRx=1, PRF=25Hz, D=3cm ===
+         (target: BWR/features land near paper FoM 0.6 mW/MHz)
+       RF                         fs= 40.0M  N=  1558  dr=  0.468Mb/s  P=  11.41mW  FoM=  1.14  BLE=OK   ADC=EXT  res=0.385mm
+     … +11 lines (ctrl+o to expand)
+
+● Structural check ran. The skeleton is sound — the staged discovery works — but it surfaced two calibration issues worth your decision before we build further.
+
+  Results
+
+  OPERATING POINT (ModulUS/PuLsE):  f_Tx=10 MHz, nRx=1, PRF=25 Hz, D=3 cm
+  mode       fs      N     data_rate   P_avg    FoM    BLE    ADC    res
+  RF       40.0M   1558   0.468 Mb/s  11.4 mW  1.14   ok     EXT   0.385mm
+  BWR      10.0M    390   0.117 Mb/s   4.4 mW  0.44   ok     EXT   0.385mm  ← ADC wrong
+  features 10.0M    390   0.005 Mb/s   4.2 mW  0.42   ok     EXT   0.385mm  ← ADC wrong
+
+  WALL DEMO:  f_Tx=10 MHz, nRx=8, PRF=100 Hz, D=3 cm
+  RF       40.0M   1558  14.96 Mb/s  301.6 mW  3.77   OVER   EXT   0.385mm
+  BWR      10.0M    390   3.74 Mb/s   77.0 mW  0.96   OVER   EXT   0.385mm  ← also over!
+  features 10.0M    390   0.15 Mb/s    7.3 mW  0.09   ok     EXT   0.385mm
+
+  Battery (BWR op-point, 1 day): 4.4 mW → 0.26 cm³, 0.46 g, 0.16 CR2032
+
+  What works well:
+  - FoM for BWR/features ≈ 0.44 — right order vs paper's 0.6 (placeholders un-tuned; we'll land it when we lock in-sandbox constants).
+  - The wall demo is better than hoped: at nRx=8, BWR also breaks the BLE wall and only features survive — that's exactly the TODO-cell-(c) "at what nRx does BWR also hit the wall?" discovery, falling out for free.
+  - Battery numbers are physically sane (sub-cm³ for a 4 mW wrist device).
+
+  Two issues needing your call
+
+  Issue 1 — fs_BWR overshoots the on-chip ADC (the important one).
+  My model reused one factor for two different things. The paper actually has two reduction numbers:
+
+  ┌─────────────────────┬────────────────────┬────────────────────────────────────────┐
+  │      Quantity       │    Paper value     │           What it describes            │
+  ├─────────────────────┼────────────────────┼────────────────────────────────────────┤
+  │ spectral mean ratio │ 2.9 → 0.7 MHz ≈ 4× │ signal fidelity (envelope vs raw)      │
+  ├─────────────────────┼────────────────────┼────────────────────────────────────────┤
+  │ sample-rate drop    │ 40 → 5 Msps = 8×   │ acquisition burden (what the ADC sees) │
+  └─────────────────────┴────────────────────┴────────────────────────────────────────┘
+
+   my code:   fs_BWR = 40/4 = 10 Msps   → EXCEEDS on-chip 5 Msps → wrongly "EXT"
+   hardware:  fs_BWR        =  5 Msps   → FITS on-chip → that's WHY ModulUS is an MCU
+
+  If I conflate them, the whole "BWR fits on-chip → MCU class, RF needs FPGA" narrative collapses (everything shows EXT). The fix: fs branch uses the 8× acquisition drop (lands BWR on the real 5 Msps), and the 4× stays as the spectral-fidelity story shown in the demo-data
+  spectral check.
+
+  → Your call: model fs_BWR = K_OS·f_Tx / 8 (so 10 MHz → 5 Msps, ties to the on-chip ADC and the FPGA-vs-MCU split), keeping "4×" as the fidelity number in the spectral plot? Or do you want a single factor and accept BWR shows as "external ADC"?
+
+  Issue 2 — "single-channel RF breaks BLE" is PRF-dependent.
+  At the op-point (nRx=1, PRF=25 Hz) single-channel RF fits (0.47 Mb/s). It only breaks the 1 Mb/s wall at PRF ≳ 53 Hz (D=3 cm). The brief's tagline holds for realistic imaging PRF (100s–1000 Hz) but not at 25 Hz.
+
+  → Not a bug — the staged demo uses nRx=8/PRF=100 so it breaks hard. But the slide-8 wording should say "raw RF at realistic PRF/channel-count breaks BLE," not "single channel always breaks." Flagging so deck and Colab stay honest.
+
+  Want me to apply the Issue-1 fix (fs 8× → BWR lands on 5 Msps) and re-run, then we look at the corrected table together?
+
+✻ Cogitated for 1m 52s
+
+❯ regarding the operating mode. The ModulUS demo is build for a 10MHz transducer which needs to be sampled at least at 20Msps (Nyquist) ands the BWR signal can be sampled at at a mx rate of 5Msps with the onboard ADC, th PRF in the demo is 25Hz. (variables: transducer frequency,
+  number of channels, prf --> change spatial/temporal resioolutions) while we have a measurment in real the variables can be explored in software
+
+● That resolves Issue 1 cleanly — and better than my 8× proposal. The number is Nyquist = 2× f_Tx, not my 4× oversampling. With K_OS = 2:
+
+   f_Tx = 10 MHz
+     RF :  fs = 2·10        = 20 Msps  → exceeds on-chip 5 Msps → external ADC (the ADQ412 in your exp.)
+     BWR:  fs = 20/4        =  5 Msps  → fits on-chip exactly → THIS is why ModulUS is an MCU
+     ratio 20/5 = 4×  ✓ matches the paper's 4×, lands on the real 5 Msps. No 8× needed.
+
+  So the single BWR_FACTOR=4 works once K_OS is the Nyquist factor 2. And your three exploration variables map straight onto the spine:
+
+    f_Tx  ──►  axial (spatial) resolution     +  sets fs (Nyquist) ──► data
+    PRF   ──►  temporal resolution            +  duty cycle        ──► data
+    nRx   ──►  lateral coverage / channels                         ──► data ×nRx
+
+  And the data model: one real ModulUS measurement (10 MHz, BWR @ 5 Msps, PRF 25 Hz) = the anchor; the Colab lets students sweep f_Tx / nRx / PRF in software around it. Real point validates, model extrapolates.
+
+  Applying K_OS=2 and re-running.
+
+● Update(modulus_model.py)
+  ⎿  Added 2 lines, removed 2 lines
+       5  # ── Constants (provenance flagged) ──────────────────────────────────────
+       6  C_SOUND    = 1540.0    # m/s   soft-tissue speed of sound [ModulUS paper; Szabo]
+       7  N_CYCLES   = 5         # –     excitation pulse length     [ModulUS exp. setup]
+       8 -K_OS       = 4         # –     RF oversampling: fs = K_OS*f_Tx  -> 10 MHz->40 Msps
+       9 -BWR_FACTOR = 4         # –     analog BW reduction          [ModulUS: 2.9->0.7 MHz]
+       8 +K_OS       = 2         # –     RF Nyquist factor: fs = K_OS*f_Tx -> 10 MHz->20 Msps
+       9 +BWR_FACTOR = 4         # –     analog BW reduction          [ModulUS: 20->5 Msps, 2.9->0.7 MHz]
+      10
+      11  ADC_FOM       = 50e-15 # J/conv-step  Walden FoM            [cite TBD]
+      12  FS_ONCHIP_MAX = 5e6    # samp/s  STM32L496 on-chip ADC ceiling [ST datasheet]
+
+● Bash(py -3.12 modulus_model.py)
+  ⎿  === ModulUS/PuLsE operating point: f_Tx=10MHz, nRx=1, PRF=25Hz, D=3cm ===
+         (target: BWR/features land near paper FoM 0.6 mW/MHz)
+       RF                         fs= 20.0M  N=   779  dr=  0.234Mb/s  P=   6.73mW  FoM=  0.67  BLE=OK   ADC=EXT  res=0.385mm
+     … +11 lines (ctrl+o to expand)
+
+● Now it's clean and physically correct. The two walls do distinct work and a three-tier story falls out:
+
+  OPERATING POINT (10 MHz, nRx=1, PRF=25 Hz, D=3 cm)
+  mode       fs      data_rate   P_avg    FoM   BLE   ADC      res
+  RF       20.0M   0.234 Mb/s  6.73 mW  0.67   ok    EXT ◄─ needs ADQ412 (your exp.)
+  BWR       5.0M   0.058 Mb/s  3.22 mW  0.32   ok    on  ◄─ fits on-chip → MCU class
+  features  5.0M   0.005 Mb/s  4.15 mW  0.41   ok    on
+
+  WALL DEMO (10 MHz, nRx=8, PRF=100 Hz, D=3 cm)
+  RF       20.0M   7.48 Mb/s  151.9 mW  1.90   OVER  EXT
+  BWR       5.0M   1.87 Mb/s   39.6 mW  0.49   OVER  on
+  features  5.0M   0.15 Mb/s    7.3 mW  0.09   ok    on
+
+  The two walls now separate the architecture classes cleanly
+
+                      ADC wall (5 Msps)        BLE wall (1 Mb/s)
+                            │                        │
+     RF        ────────────►│ EXT ADC + FPGA        │ OVER   → not a wearable
+     BWR       fits ◄────────┤ MCU class             │ OVER@8ch → ModulUS today
+     features  fits ◄────────┤ MCU class    fits ◄───┤ ok      → the survivor
+                            │                        │
+                "why ModulUS is an MCU"   "why streaming raw doesn't scale"
+
+  - ADC wall splits RF (external ADC + FPGA, larger/power-hungry) from BWR/features (on-chip → MCU/wearable). This is Table I's FPGA-vs-MCU divide, now mechanistic.
+  - BLE wall splits features (survives at scale) from BWR (fits the MCU but still floods the radio at nRx=8). Exactly your TODO-(c) discovery.
+
+  One calibration item remains
+
+  FoM at the BWR op-point = 0.32; paper's PuLsE = 0.6. Right order, but ~2× low because the in-sandbox power constants are still placeholders (P_pulser=1 mW, P_idle=1 mW, AFE small). Closing this gap is the next provenance task — and these are in-sandbox blocks, so datasheet or
+  ModulUS-measured values are fair game.
+
+   current P_avg(BWR op) = 3.2 mW  →  need ~5.8 mW for FoM 0.6 (PuLsE Table I)
+   gap ≈ 2.6 mW sits in: pulser + MCU active + AFE  ← lock these from datasheet/measurement
+
+  Recording the locked modeling choices, then a question on how to source those last constants.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Last sourcing question before we lock the model and move to building the notebook. The ~2.6 mW gap lives in the in-sandbox power constants (pulser, MCU-active, AFE). Three ways to source them:
+
+  ┌────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+  │               Option               │                                                      What it means                                                       │                         Strength                         │
+  ├────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ Anchor to PuLsE's published 5.8 mW │ Calibrate the lumped static budget so the op-point reproduces the already-published PuLsE figure (your ref [6], Table I) │ Self-citing, no new measurement, defensible today        │
+  ├────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ ModulUS-measured                   │ You measure pulser / MCU / AFE rails on the board                                                                        │ Strongest, but needs bench time before the deck is final │
+  ├────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ Component datasheets               │ STHVUP32, STM32L496 active/idle currents                                                                                 │ Citable, but adds up loosely vs a real system            │
+  └────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┘
+
+  My lean: anchor to PuLsE's 5.8 mW for the slide-ready number (it's your own published, cited value), and optionally refine with a ModulUS measurement later if you have bench time. That makes the FoM land at ~0.6 by construction and keeps every quoted number traceable.
+
+  Which sourcing do you want — and once you pick, shall I (a) calibrate the constants to it, then (b) start building the actual notebook (widgets + staged cells + data loader)?
+
+✻ Cooked for 1m 43s
+
+❯ Before going into this specific question one key and important discussion point on the big piocture narrative of the exercise: ONe key idea about the narrative of this exercise: Maybe we first understand the signals itself. then jump into what wwe can do (sampling frequency
+  and throuughbput --> at what cost) and then jump into the design of the system end-to end to understand how these limitations map into a real system. does this make sense or would you suggest otherwise?
+
+● It makes sense — and I'd argue it's the stronger ordering than the brief's original (which asserts the spine top-down). Yours is inductive: start from the thing everyone can look at (the real signal), then derive the constraints, then live with them. Every abstraction is
+  earned, not declared. For a mixed audience that's the right move.
+
+  Here's your arc, mapped to the spine and to a one-line cognitive frame for each act:
+
+   ACT 1  SIGNAL          ACT 2  COST              ACT 3  SYSTEM
+   "what's in here?"  ──► "what's it cost      ──► "can this be
+                           to capture & move?"      a wearable?"
+   ─────────────          ─────────────            ─────────────
+   resolution             Nyquist → samples        power → battery
+   frequency              → data rate → walls       → volume → wearable
+   (RF vs envelope)       (ADC wall, BLE wall)      → INVERT the chain
+   ─────────────          ─────────────            ─────────────
+     SEE it                 PAY for it               LIVE with it
+
+  ┌────────────┬───────────────────────────────┬───────────────────────────────┬───────────────────────────────────────────┐
+  │    Act     │        Object of study        │         Spine segment         │             What students do              │
+  ├────────────┼───────────────────────────────┼───────────────────────────────┼───────────────────────────────────────────┤
+  │ 1 — Signal │ the real RF + envelope traces │ resolution ← frequency        │ look, FFT, measure 2.9/0.7 MHz, axial res │
+  ├────────────┼───────────────────────────────┼───────────────────────────────┼───────────────────────────────────────────┤
+  │ 2 — Cost   │ Nyquist & throughput          │ freq → samples → data rate    │ compute fs, hit the ADC & BLE walls       │
+  ├────────────┼───────────────────────────────┼───────────────────────────────┼───────────────────────────────────────────┤
+  │ 3 — System │ the whole device              │ power → battery → wearability │ invert: given wrist budget, what survives │
+  └────────────┴───────────────────────────────┴───────────────────────────────┴───────────────────────────────────────────┘
+
+  Three sharpenings I'd suggest (all small)
+
+  1. Plant the envelope in Act 1, cash it in Act 3.
+  Show both raw RF and the analog envelope in Act 1 as "two representations of the same echo." Students don't yet know why the envelope matters. Then in Act 2 raw RF breaks the wall; in Act 3 the envelope (planted earlier) becomes the escape. That's a setup-payoff, not a new
+  concept dropped late.
+
+  2. Act 3 = forward then invert.
+  Your Act 3 as stated is forward ("how limitations map into a real system") — that teaches. Add the inversion as the finale: given a wrist battery, what f_Tx / nRx / mode survives? Forward maps; inverse assesses. This is the brief's slide-17 idea, and it's what makes the
+  terminal objective ("sketch an architecture") gradeable.
+
+  3. Keep the "cost" in Act 2 to the data deluge; let energy/volume land in Act 3.
+   Act 2 cost  =  samples → data rate → the two walls   (the deluge)
+   Act 3 cost  =  power → battery → cm³/g → wearability  (the consequence)
+  Otherwise Act 2 tries to do power+battery and Act 3 has nothing left. Clean split: Act 2 proves "raw doesn't fit the pipe," Act 3 proves "and even if it did, the battery is a brick."
+
+  One optional addition: a 30-second map up front
+
+  Before Act 1, flash the full spine as a roadmap (advance organizer), then traverse it inductively. Gives people the map without spoiling the discovery:
+
+   resolution → frequency → Nyquist → data → power → battery → wearability
+   └─ Act 1 ──────────────┘ └──── Act 2 ────┘ └────── Act 3 ──────────────┘
+              "you are here" markers as we go
+
+  One implication to flag
+
+  This makes the signal the entry point, so the live ModulUS acquisition (raw RF + envelope) is the object students dissect in Act 1 — not a finale. In the talk it can still demo near the end, but the Colab opens on the signal. The demo data flows: acquire live → load in Colab
+  Act 1 → everything downstream computes from it.
+
+  Net: yes, adopt your three-act arc. With the envelope-planting, the forward-then-invert finale, and the up-front roadmap, it's tighter than the original spine. Want me to lock this as the Colab's structure (and reconcile it with the brief's act list), then return to the
+  constant-sourcing question?
+
+✻ Worked for 58s
+
+❯ i like this. one thing to keep in mind when designing the code. I want to have lean and understandable research code. the code should be moduilar and ideally have the ModulUS hardware  mirrored into software. do you understand?
+
+● Yes, I understand — and it's a good principle: the software becomes a digital twin of the ModulUS board stack. Each physical block gets one lean software module that owns (a) what it does to the signal and (b) what it costs in power. The notebook's structure then is the
+  hardware tour. Let me ground this in your research-code standards first.
+
+● Skill(code_philosophy)
+  ⎿  Successfully loaded skill
+
+● Understood, and it aligns with your research-code bar (lean, modular, minimal ceremony, constants not magic numbers, type hints only at real interfaces). Here's the digital-twin architecture I'd build — review the style before I refactor modulus_model.py into it.
+
+  Hardware → software map (one unit per block)
+
+   PHYSICAL STACK (signal flows down)        SOFTWARE TWIN
+   ─────────────────────────────────        ─────────────
+   Transducer 10 MHz ──────────────────────► Transducer   f_Tx → λ, axial_res
+   TxRx board: STHVUP32 pulser + T/R ───────► Pulser       PRF → duty, P_pulser
+   AFE board: BWR circuits ─────────────────► AFE          mode: RF passthru | envelope
+   Compute: on-chip ADC 5 Msps/12 b ────────► ADC          fs (Nyquist), bits → N; ADC wall
+   Compute: STM32L496 MCU ──────────────────► MCU          features compute, P_mcu
+   [downstream, NOT in sandbox] NRF53 BLE ──► Radio        data_rate → P_radio; BLE wall
+                                              Battery      ΣP → Wh, cm³, g
+                                              System       walks the stack = the spine
+
+  Each unit owns exactly two things: what it does to the signal and what it costs. Nothing else.
+
+  The convention (lean, uniform — no ABC ceremony)
+
+  A small shared acquisition context carries the derived chain so blocks don't recompute or pass 8 args around (DRY):
+
+  @dataclass
+  class Acq:                       # the running state as we walk the stack
+      f_Tx: float; bits: int; nRx: int; PRF: float; D: float; mode: str
+      fs: float = 0.0              # filled by ADC
+      N: float = 0.0              # filled by ADC
+      duty: float = 0.0           # filled by Pulser
+      data_rate: float = 0.0      # filled by ADC/MCU
+
+  Each block is a dataclass of its specs + a power(acq) method; signal-touching blocks also expose a process(trace) for the real-data path. Example — the AFE, the block that earns the paper:
+
+  @dataclass
+  class AFE:
+      """ModulUS analog front-end. RF mode = passthrough; BWR mode = envelope
+      detect, which collapses the bandwidth (paper: 2.9 -> 0.7 MHz)."""
+      bwr_factor: int = 4
+      p_on: float = 3e-3          # W, active   [in-sandbox: datasheet/measure]
+      p_leak: float = 50e-6       # W, leakage
+
+      def bandwidth_factor(self, mode):        # how much it eases the ADC
+          return 1 if mode == "RF" else self.bwr_factor
+
+      def process(self, rf, fs):               # real-signal twin (Act 1)
+          return envelope(rf, fs)              # |Hilbert| or analog model
+
+      def power(self, acq):
+          return self.p_on * acq.duty * acq.nRx + self.p_leak
+
+  @dataclass
+  class ADC:
+      """STM32L496 on-chip ADC: dual 5 Msps, 12-bit. The 5 Msps cap is the wall."""
+      fs_max: float = 5e6
+      fom: float = 50e-15                       # Walden  [cite TBD]
+
+      def configure(self, acq, afe):            # derive fs from transducer + AFE
+          nyq = 2 * acq.f_Tx
+          acq.fs = nyq / afe.bandwidth_factor(acq.mode)
+          acq.N  = acq.fs * (2 * acq.D / 1540.0)
+          return acq.fs <= self.fs_max          # fits_onchip?
+
+      def power(self, acq):
+          return self.fom * (2**acq.bits) * acq.fs * acq.duty * acq.nRx
+
+  How System composes them = the spine, walked in physical order
+
+  class System:
+      def __init__(self):
+          self.tx, self.pulser, self.afe = Transducer(), Pulser(), AFE()
+          self.adc, self.mcu, self.radio = ADC(), MCU(), Radio()
+
+      def walk(self, acq):                       # signal flows down the stack
+          self.pulser.configure(acq)             # duty
+          fits_adc = self.adc.configure(acq, self.afe)   # fs, N
+          self.mcu.configure(acq)                # data_rate (features vs full)
+          fits_ble = self.radio.fits(acq)
+          P = {b.__class__.__name__: b.power(acq)
+               for b in (self.pulser, self.afe, self.adc, self.mcu, self.radio)}
+          return dict(acq=acq, P=P, P_avg=sum(P.values()),
+                      fits_onchip=fits_adc, fits_ble=fits_ble)
+
+  The power breakdown dict falls out of the comprehension (no copy-paste per block), and adding a hypothetical block later = one line.
+
+  Why this serves the teaching, not just the code
+
+  ┌───────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────┐
+  │                Benefit                │                                   Where it shows                                    │
+  ├───────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ Notebook = guided hardware tour       │ one cell per twin, in board order                                                   │
+  ├───────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ 3-act narrative maps onto units       │ Act 1 = Transducer+AFE (process), Act 2 = ADC+Radio (walls), Act 3 = Battery+System │
+  ├───────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ Students swap a block                 │ change AFE.bwr_factor or drop in a new Radio → see the spine move                   │
+  ├───────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ Mirrors the real sandbox's modularity │ the paper's whole pitch is swappable boards — the code embodies it                  │
+  └───────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────┘
+
+  Three structural choices before I build
+
+  ┌─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────┬───────────────────────────────────┐
+  │  #  │                                                    Choice                                                    │              My lean              │
+  ├─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ a   │ Single importable file modulus.py (sectioned by block, ~200 lines, also paste-able into a cell) vs a package │ single file — leanest for a Colab │
+  ├─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ b   │ Acq context object (above) vs threading raw args                                                             │ Acq — DRY, readable               │
+  ├─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ c   │ Same class holds both process (signal) and power (model) twins                                               │ yes — that's the mirror           │
+  └─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────┴───────────────────────────────────┘
+
+  Sign off on the style + a/b/c and I'll refactor modulus_model.py into these twins, re-run the sanity check to confirm identical numbers, then we return to constant-sourcing and start the notebook. Anything you'd change in the interface?
+
+✻ Sautéed for 1m 40s
+
+❯ also I want you to act as a software engineer expert designing software for an academic lecture and exercise
+
+● Good — that's the fourth hat, and it's the one that changes the objective function. Research code optimizes for iteration speed; teaching software optimizes for the learner's experience and surviving a live lecture in front of 50 people. Same lean/modular core, different
+  failure modes to engineer against. Let me record the persona set, then lay out what that lens adds.
+
+  Wrote 2 memories (ctrl+o to expand)
+
+● What the teaching-SWE hat adds (on top of the twin architecture)
+
+  The twin design stands. But teaching software has failure modes research code doesn't, and the engineering must defend against them:
+
+  ┌────────────┬────────────────────────┬──────────────────────────────────────────┐
+  │  Concern   │     Research code      │     Teaching software (what changes)     │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Audience   │ you                    │ 50 strangers, mixed skill, their laptops │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Worst case │ wrong number           │ instructor freezes mid-lecture           │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Feedback   │ you read the traceback │ student needs instant green/red          │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Cell order │ you run top-down       │ students run cells randomly              │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Data       │ always present         │ real file may be missing at runtime      │
+  ├────────────┼────────────────────────┼──────────────────────────────────────────┤
+  │ Deps       │ whatever's installed   │ only what Colab ships, zero pip          │
+  └────────────┴────────────────────────┴──────────────────────────────────────────┘
+
+  Colab-specific engineering decisions
+
+  1. Single source of truth + visible tour — resolved with %%writefile.
+  The DRY tension (importable module vs visible hardware tour) dissolves:
+   Cell 1:  %%writefile modulus.py     ← the ONE copy of the twins (the tour, collapsible)
+   Cell 2:  from modulus import System, load_traces, Acq
+   Acts:    import & use it; show each block's snippet in markdown for discussion
+  One canonical copy, importable, downloadable, version-controllable, and it's the tour material. EE-tier opens modulus.py; everyone else drives widgets.
+
+  2. Fail-soft data loader (live-lecture insurance).
+  def load_traces(path):
+      """Real ModulUS traces if present; loud synthetic fallback otherwise.
+      NEVER crash in front of the class."""
+      if not Path(path).exists():
+          warn_banner("SYNTHETIC DATA — real ModulUS file not found")
+          return synth_rf_envelope()      # reproduces 2.9/0.7 MHz means
+      return np.load(path)
+
+  3. Self-check asserts = the feedback loop. Every TODO cell is followed by an assertion that turns the learner's edit green or hands them a hint — immediate, no instructor needed:
+  # TODO (b): complete the data-rate line
+  data_rate = ...                      # students fill
+  assert abs(data_rate - 1.87e6) < 1e5, "Hint: N · bits · PRF · nRx"
+  print("✓ data rate correct")
+
+  4. Order-independent interaction. System is built once (stateless specs); each widget callback creates a fresh Acq and walks it. No global mutated across cells → re-running any cell in any order is safe. (This is why Acq is per-call, not a global — engineering reason, not just
+  style.)
+
+  5. Edge-guarded widgets. Slider extremes can't divide-by-zero or NaN a plot in front of the room (f_Tx>0 enforced by widget min; guard nRx≥1). Widgets recompute in <100 ms — no heavy compute on the interaction path.
+
+  6. Runtime dependency floor: numpy, scipy, matplotlib, ipywidgets — all preinstalled in Colab. No pip install, no network at runtime (demo data bundled).
+
+  Consolidated sign-off before I refactor + build
+
+  ┌─────┬─────────────────────────────────────────────────────────────┬─────────┐
+  │  #  │                          Decision                           │ My lean │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ a   │ Single file modulus.py, sectioned by block                  │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ b   │ Acq context object (per-call, fresh)                        │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ c   │ Each twin holds both process (signal) + power (model)       │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ d   │ %%writefile modulus.py cell → import (single-source + tour) │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ e   │ Fail-soft load_traces with synthetic fallback               │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ f   │ Self-check asserts after every TODO cell                    │ yes     │
+  ├─────┼─────────────────────────────────────────────────────────────┼─────────┤
+  │ g   │ Stateless System, fresh Acq per widget eval                 │ yes     │
+  └─────┴─────────────────────────────────────────────────────────────┴─────────┘
+
+  If a–g look right, I'll: (1) refactor modulus_model.py into the twin module, (2) re-run the sanity check to prove identical numbers, then we go back to constant-sourcing (PuLsE-anchor) and start assembling the notebook act by act. Anything to change?
+
+✻ Baked for 1m 34s
+
+❯ looks fine. please keep in mind the structure of ModulUS. The system has 4 modules: 1. a mother board interconnecting all boards, 2. an control/sequencing/acquisition board housing the STM32 MCU and ADCs, 3. the pulser board with the STHVUP32 (Tx pulser and Tx/RX switch, 4.
+  the AFE (now an envelope detector. In total ModulUS exposes 8 channels
+
+● Got it — let me correct the twin map to mirror ModulUS exactly, and make the sandbox boundary explicit (which is the part that matters for honest power accounting):
+
+     ┌─ EXTERNAL FRONT (not a ModulUS board) ─┐
+       Transducer 10 MHz   f_Tx → λ, axial_res; the source
+     └─────────────────────────────────────────┘
+     ╔═ MODULUS SANDBOX — 4 modules ════════════════════════════════╗
+       Motherboard      ≡  System          interconnect / composition root
+       Pulser board        STHVUP32 + T/R  PRF, duty, P_pulser  (8 ch exposed)
+       AFE board           envelope detect  mode: RF passthru | envelope; P_afe
+       Control board       STM32 + dual ADC acquire: fs,N,5Msps wall,P_adc
+                                            compute: features, P_mcu
+     ╚══════════════════════════════════════════════════════════════╝
+     ┌─ EXTERNAL DOWN / POWER (not ModulUS) ──┐
+       Radio (BLE)      data_rate → P_radio; BLE wall   ← downstream add-on
+       Battery          ΣP → Wh, cm³, g                 ← power source
+     └─────────────────────────────────────────┘
+
+  Corrections folded in vs my earlier draft:
+
+  ┌────────────────────────────┬───────────────────────────────────────────────────┐
+  │            Was             │                  Now (your spec)                  │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ separate TR_switch block   │ T/R lives on the Pulser board with STHVUP32       │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ generic "BWR" AFE          │ AFE = envelope detector specifically              │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ ADC + MCU as 2 loose twins │ both on one Control board (composite)             │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Motherboard implicit       │ Motherboard ≡ the System that interconnects twins │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ BLE inside compute board   │ BLE outside the sandbox, marked external          │
+  ├────────────────────────────┼───────────────────────────────────────────────────┤
+  │ nRx unbounded              │ 8 channels exposed = hardware cap                 │
+  └────────────────────────────┴───────────────────────────────────────────────────┘
+
+  One sub-decision (the rest is settled)
+
+  Merge ADC + MCU into one ControlBoard class (they're one physical board), with two clearly-sectioned method groups — acquire() owning fs/N/the 5 Msps wall/P_adc, and compute() owning features/P_mcu. Mirrors the board, fewer classes, but each constraint keeps its named method so
+  the ADC-wall lesson stays sharp.
+
+  → My lean: yes, merge (faithful to the 4-module structure). Alternative is keeping ADC and MCU separate for maximum teaching granularity. Your call.
+
+  Two things I'll bake in as guards/flags
+
+  - nRx > 8 → flag "beyond ModulUS hardware" (software can extrapolate, but the notebook says so — honest about where the real platform ends and the model begins).
+  - Dual ADC = 2 parallel converters. First-order I'll treat nRx as parallel; the reality that 8 channels time-multiplex onto 2 ADCs (→ effective PRF/throughput cost) I'll leave as an EE-tier "go deeper" note, not first-order clutter. Flagging so we don't silently imply 8
+  truly-parallel channels.
+
+  Recording the corrected board↔twin mapping, then — if you confirm the merge — I'll refactor modulus_model.py into the twin module and re-run the sanity check.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Corrected map recorded. Ready to refactor modulus_model.py into the four-module twin (with ControlBoard merging ADC+MCU, per my lean) and re-run the sanity check to prove the numbers are unchanged — just confirm the merge and I'll build.
+
+✻ Brewed for 1m 21s
+
+❯ Big picture I would call the boards mother board (the base) and doughter boards (all others). do you have name sugestions for the specific boards. names good fiting the ModulUS concept but can be realated to how Arduino or Rpi make use of it opr maybe other platdforms
+
+● Good instinct — naming the add-ons is a branding decision, and the ecosystem precedents are almost all wearable/armor metaphors, which is doubly on-theme for wearable US. Here's the lineage:
+
+  ┌──────────────────┬─────────┬────────────────────────────────┬──────────────────────┐
+  │     Platform     │  Base   │          Add-on name           │       Metaphor       │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Arduino          │ board   │ Shield                         │ armor, stacks on top │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Raspberry Pi     │ board   │ HAT (Hardware Attached on Top) │ headwear             │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Adafruit         │         │ Bonnet                         │ headwear             │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ BeagleBone       │         │ Cape                           │ garment              │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Adafruit Feather │ Feather │ Wing                           │ anatomy              │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Digilent / FPGA  │ carrier │ Pmod / FMC mezzanine           │ technical            │
+  └──────────────────┴─────────┴────────────────────────────────┴──────────────────────┘
+
+  Terminology (the easy part)
+
+  - Base = Motherboard ✓ (keep — universal).
+  - Add-ons = Daughterboards generically, but I'd brand the class as Modules — it literally spells out ModulUS. "Each daughterboard is a ModulUS Module." The platform's name and its swappability become the same word.
+
+  Per-board names — my recommendation ties them to the physics you're teaching
+
+  The workshop's slide 4 is pulse–echo. If the boards are named after the signal's journey, the hardware teaches the concept:
+
+     PING  ──────►  transducer  ──────►  tissue
+     (Tx pulse)                            │ reflects
+     CORE  ◄── ECHO  ◄────────────────────┘
+   (digitize+    (catch &
+    compute)     condition)
+
+  ┌───────────────────────┬─────────────────────────────┬─────────────────────────────────────────┬─────────────────────────────┬────────────────────┐
+  │     ModulUS board     │          Function           │ Scheme A — Ping/Echo/Core (recommended) │ Scheme B — self-documenting │ Scheme C — literal │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ Pulser + T/R switch   │ send pulse, route echo      │ Ping                                    │ Drive                       │ TxRx               │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ AFE envelope detector │ catch + condition echo      │ Echo                                    │ Sense                       │ AFE                │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ STM32 + dual ADC      │ digitize, sequence, compute │ Core                                    │ Core                        │ Control            │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ base                  │ interconnect                │ Motherboard                             │ Motherboard                 │ Motherboard        │
+  └───────────────────────┴─────────────────────────────┴─────────────────────────────────────────┴─────────────────────────────┴────────────────────┘
+
+  Why Scheme A (Ping / Echo / Core):
+  - Pedagogical: the board names are the A-mode lesson — ping out, echo back, core processes. Students can't forget the signal chain because the boards spell it.
+  - Memorable + brandable: one syllable each, ecosystem-style (like HAT/Cape), reads as a product line.
+  - Accurate: "ping" is the genuine sonar/pulse-echo term; "echo" is exactly what the AFE conditions.
+  - Clean software twins: Ping, Echo, Core, Motherboard/System.
+
+  Scheme B (Drive/Sense/Core) is the safe self-documenting fallback if you find Ping/Echo too playful for an IEEE context — though I'd argue Ping/Echo is technical, not cute, since it names the physics.
+
+  → Your call on the scheme. Whichever you pick becomes the twin class names, the notebook section headers, and the deck's hardware slide labels (one consistent vocabulary across code + talk + boards). Which way do you want to go?
+
+✻ Sautéed for 1m 34s
+
+※ recap: We're building the ModulUS power/battery Colab for your CEEUS 2026 workshop, currently designing the hardware-mirrored software twins. Next action: you pick the board naming scheme (my recommendation: Ping / Echo / Core), then I refactor the model and re-run the sanity
+  check. (disable recaps in /config)
+
+❯ A is very good!
+
+● A it is — Ping / Echo / Core on the Motherboard, daughterboards branded as Modules. The names are the pulse–echo lesson, which is exactly the pedagogy we want. Recording it, then building the twin module.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Now the twin module:
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Create file
+ modulus.py
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+    1 """ModulUS digital twin — lean software mirror of the 4-module sandbox.
+    2
+    3 Hardware module          -> software twin
+    4   Motherboard (base)     -> System    interconnect / composition root
+    5   Ping  (pulser + T/R)   -> Ping      send the pulse        (8 ch exposed)
+    6   Echo  (AFE envelope)   -> Echo      catch the echo        (RF passthru | envelope)
+    7   Core  (STM32 + 2x ADC) -> Core      digitize, sequence, compute
+    8
+    9 External to the sandbox (modeled, NOT ModulUS boards):
+   10   Transducer (front)  |  Radio/BLE (downstream)  |  Battery (power source)
+   11
+   12 f_Tx is the ONE primary knob; fs and axial resolution are DERIVED (the spine):
+   13   f_Tx -> resolution -> fs (Nyquist) -> N -> data_rate -> power -> battery
+   14
+   15 Research-tier: lean, modular, constants up top, type hints only at edges.
+   16 Provenance flags:  OK solid · ~ cite TBD · # datasheet/measure
+   17 """
+   18 from dataclasses import dataclass
+   19 import numpy as np
+   20
+   21 # ── Constants ────────────────────────────────────────────────────────────
+   22 C_SOUND    = 1540.0    # m/s    soft-tissue speed of sound        OK [ModulUS paper]
+   23 N_CYCLES   = 5         # -      excitation pulse length            OK [ModulUS exp.]
+   24 K_NYQUIST  = 2         # -      RF Nyquist factor: fs_RF = 2*f_Tx  OK
+   25 BWR_FACTOR = 4         # -      envelope bandwidth reduction       OK [20->5 Msps; 2.9->0.7 MHz]
+   26 N_CH_MAX   = 8         # -      channels exposed by ModulUS        OK [STHVUP32, 8 of 32]
+   27 N_FEATURES = 16        # -      features-mode payload per A-line   #
+   28
+   29 ADC_FOM    = 50e-15    # J/conv-step  Walden ADC FoM              ~
+   30 FS_ONCHIP  = 5e6       # samp/s  STM32L496 on-chip ADC ceiling    # [ST datasheet]
+   31
+   32 E_BIT      = 20e-9     # J/bit  effective BLE energy (EXTERNAL)   ~ literature
+   33 R_BLE_MAX  = 1e6       # bit/s  usable BLE throughput (EXTERNAL)  ~ literature
+   34
+   35 RHO_VOL    = 400.0     # Wh/L   Li-ion volumetric density         ~
+   36 RHO_GRAV   = 230.0     # Wh/kg  Li-ion gravimetric density        ~
+   37 CR2032_WH  = 0.65      # Wh     reference coin cell               #
+   38
+   39
+   40 # ── Acquisition context: state filled as the signal walks the stack ───────
+   41 @dataclass
+   42 class Acq:
+   43     f_Tx: float; bits: int; nRx: int; PRF: float; D: float; mode: str
+   44     fs: float = 0.0          # filled by Core.acquire
+   45     N: float = 0.0           # filled by Core.acquire
+   46     duty: float = 0.0        # filled by Ping.configure
+   47     data_rate: float = 0.0   # filled by Core.compute
+   48
+   49     @property
+   50     def t_acq(self):
+   51         return 2 * self.D / C_SOUND      # round-trip window to depth D [s]
+   52
+   53
+   54 # ── External front: the transducer (sets resolution, the source) ──────────
+   55 @dataclass
+   56 class Transducer:
+   57     n_cycles: int = N_CYCLES
+   58
+   59     def axial_res(self, f_Tx):
+   60         lam = C_SOUND / f_Tx             # wavelength [m]
+   61         return self.n_cycles * lam / 2.0 # half the spatial pulse length [m]
+   62
+   63
+   64 # ── Ping = pulser board (STHVUP32 + T/R switch): send the pulse ───────────
+   65 @dataclass
+   66 class Ping:
+   67     p_pulser: float = 1e-3               # W  # anchor to PuLsE budget
+   68     n_ch_max: int = N_CH_MAX
+   69
+   70     def configure(self, acq):
+   71         acq.duty = acq.t_acq * acq.PRF   # active fraction
+   72
+   73     def power(self, acq):
+   74         return self.p_pulser             # low-duty Tx; ~constant first order
+   75
+   76
+   77 # ── Echo = AFE board (envelope detector): catch & condition the echo ──────
+   78 @dataclass
+   79 class Echo:
+   80     bwr_factor: int = BWR_FACTOR
+   81     p_on: float = 3e-3                   # W active   #
+   82     p_leak: float = 50e-6               # W leakage  #
+   83
+   84     def bandwidth_factor(self, mode):
+   85         return 1 if mode == "RF" else self.bwr_factor   # how much it eases the ADC
+   86
+   87     def process(self, rf):              # real-signal twin: |Hilbert| envelope
+   88         from scipy.signal import hilbert
+   89         return np.abs(hilbert(rf))
+   90
+   91     def power(self, acq):
+   92         return self.p_on * acq.duty * acq.nRx + self.p_leak
+   93
+   94
+   95 # ── Core = control board (STM32 + dual ADC): digitize, sequence, compute ──
+   96 @dataclass
+   97 class Core:
+   98     fs_max: float = FS_ONCHIP
+   99     fom: float = ADC_FOM
+  100     p_idle: float = 1e-3                 # W  #
+  101     p_feat: float = 2e-3                # W  # on-device feature compute
+  102     n_features: int = N_FEATURES
+  103
+  104     def acquire(self, acq, echo):       # derive fs, N from transducer + Echo
+  105         nyq = K_NYQUIST * acq.f_Tx
+  106         acq.fs = nyq / echo.bandwidth_factor(acq.mode)
+  107         acq.N  = acq.fs * acq.t_acq
+  108         return acq.fs <= self.fs_max    # fits on-chip ADC? (else needs external/FPGA)
+  109
+  110     def compute(self, acq):             # MCU decides the payload to ship
+  111         if acq.mode == "features":
+  112             acq.data_rate = self.n_features * acq.bits * acq.PRF * acq.nRx
+  113         else:                           # RF / BWR differ only via fs -> N
+  114             acq.data_rate = acq.N * acq.bits * acq.PRF * acq.nRx
+  115
+  116     def power(self, acq):
+  117         p_adc = self.fom * (2**acq.bits) * acq.fs * acq.duty * acq.nRx
+  118         p_mcu = self.p_idle + (self.p_feat if acq.mode == "features" else 0.0)
+  119         return p_adc + p_mcu
+  120
+  121
+  122 # ── External downstream: BLE radio (NOT a ModulUS board) ──────────────────
+  123 @dataclass
+  124 class Radio:
+  125     e_bit: float = E_BIT
+  126     r_max: float = R_BLE_MAX
+  127
+  128     def fits(self, acq):
+  129         return acq.data_rate <= self.r_max
+  130
+  131     def power(self, acq):
+  132         return acq.data_rate * self.e_bit
+  133
+  134
+  135 # ── External power source: battery sizing ─────────────────────────────────
+  136 @dataclass
+  137 class Battery:
+  138     rho_vol: float = RHO_VOL
+  139     rho_grav: float = RHO_GRAV
+  140
+  141     def size(self, P_avg, days=1):
+  142         Wh = P_avg * 86400 * days / 3600.0
+  143         return dict(Wh=Wh, vol_cm3=Wh / self.rho_vol * 1000.0,
+  144                     mass_g=Wh / self.rho_grav * 1000.0, n_cr2032=Wh / CR2032_WH)
+  145
+  146
+  147 def fom_mw_per_mhz(P_mW, nRx, f_Tx):    # paper FoM: avg power / Rx ch / f_Tx
+  148     return P_mW / nRx / (f_Tx / 1e6)
+  149
+  150
+  151 # ── Motherboard = System: interconnect the twins, walk the spine ──────────
+  152 class System:
+  153     """The Motherboard. Holds the twins; walk() runs the signal down the stack."""
+  154
+  155     def __init__(self):
+  156         self.transducer = Transducer()
+  157         self.ping, self.echo, self.core = Ping(), Echo(), Core()
+  158         self.radio, self.battery = Radio(), Battery()
+  159
+  160     def walk(self, acq):                 # signal flows down the board stack
+  161         self.ping.configure(acq)         # -> duty
+  162         fits_adc = self.core.acquire(acq, self.echo)   # -> fs, N
+  163         self.core.compute(acq)           # -> data_rate
+  164         P = {"Ping":  self.ping.power(acq),
+  165              "Echo":  self.echo.power(acq),
+  166              "Core":  self.core.power(acq),
+  167              "Radio": self.radio.power(acq)}
+  168         P_avg = sum(P.values())
+  169         return dict(acq=acq, P=P, P_avg=P_avg,
+  170                     axial_res_mm=self.transducer.axial_res(acq.f_Tx) * 1e3,
+  169         return dict(acq=acq, P=P, P_avg=P_avg,
+  170                     axial_res_mm=self.transducer.axial_res(acq.f_Tx) * 1e3,
+  │ Raspberry Pi     │ board   │ HAT (Hardware Attached on Top) │ headwear             │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Adafruit         │         │ Bonnet                         │ headwear             │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ BeagleBone       │         │ Cape                           │ garment              │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Adafruit Feather │ Feather │ Wing                           │ anatomy              │
+  ├──────────────────┼─────────┼────────────────────────────────┼──────────────────────┤
+  │ Digilent / FPGA  │ carrier │ Pmod / FMC mezzanine           │ technical            │
+  └──────────────────┴─────────┴────────────────────────────────┴──────────────────────┘
+
+  Terminology (the easy part)
+
+  - Base = Motherboard ✓ (keep — universal).
+  - Add-ons = Daughterboards generically, but I'd brand the class as Modules — it literally spells out ModulUS. "Each daughterboard is a ModulUS Module." The platform's name and its swappability become the same word.
+
+  Per-board names — my recommendation ties them to the physics you're teaching
+
+  The workshop's slide 4 is pulse–echo. If the boards are named after the signal's journey, the hardware teaches the concept:
+
+     PING  ──────►  transducer  ──────►  tissue
+     (Tx pulse)                            │ reflects
+     CORE  ◄── ECHO  ◄────────────────────┘
+   (digitize+    (catch &
+    compute)     condition)
+
+  ┌───────────────────────┬─────────────────────────────┬─────────────────────────────────────────┬─────────────────────────────┬────────────────────┐
+  │     ModulUS board     │          Function           │ Scheme A — Ping/Echo/Core (recommended) │ Scheme B — self-documenting │ Scheme C — literal │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ Pulser + T/R switch   │ send pulse, route echo      │ Ping                                    │ Drive                       │ TxRx               │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ AFE envelope detector │ catch + condition echo      │ Echo                                    │ Sense                       │ AFE                │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ STM32 + dual ADC      │ digitize, sequence, compute │ Core                                    │ Core                        │ Control            │
+  ├───────────────────────┼─────────────────────────────┼─────────────────────────────────────────┼─────────────────────────────┼────────────────────┤
+  │ base                  │ interconnect                │ Motherboard                             │ Motherboard                 │ Motherboard        │
+  └───────────────────────┴─────────────────────────────┴─────────────────────────────────────────┴─────────────────────────────┴────────────────────┘
+
+  Why Scheme A (Ping / Echo / Core):
+  - Pedagogical: the board names are the A-mode lesson — ping out, echo back, core processes. Students can't forget the signal chain because the boards spell it.
+  - Memorable + brandable: one syllable each, ecosystem-style (like HAT/Cape), reads as a product line.
+  - Accurate: "ping" is the genuine sonar/pulse-echo term; "echo" is exactly what the AFE conditions.
+  - Clean software twins: Ping, Echo, Core, Motherboard/System.
+
+  Scheme B (Drive/Sense/Core) is the safe self-documenting fallback if you find Ping/Echo too playful for an IEEE context — though I'd argue Ping/Echo is technical, not cute, since it names the physics.
+
+  → Your call on the scheme. Whichever you pick becomes the twin class names, the notebook section headers, and the deck's hardware slide labels (one consistent vocabulary across code + talk + boards). Which way do you want to go?
+
+✻ Sautéed for 1m 34s
+
+※ recap: We're building the ModulUS power/battery Colab for your CEEUS 2026 workshop, currently designing the hardware-mirrored software twins. Next action: you pick the board naming scheme (my recommendation: Ping / Echo / Core), then I refactor the model and re-run the sanity
+  check. (disable recaps in /config)
+
+❯ A is very good!
+
+● A it is — Ping / Echo / Core on the Motherboard, daughterboards branded as Modules. The names are the pulse–echo lesson, which is exactly the pedagogy we want. Recording it, then building the twin module.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Now the twin module:
+
+● Write(modulus.py)
+  ⎿  Wrote 232 lines to modulus.py
+       1 """ModulUS digital twin — lean software mirror of the 4-module sandbox.
+       2
+       3 Hardware module          -> software twin
+       4   Motherboard (base)     -> System    interconnect / composition root
+       5   Ping  (pulser + T/R)   -> Ping      send the pulse        (8 ch exposed)
+       6   Echo  (AFE envelope)   -> Echo      catch the echo        (RF passthru | envelope)
+       7   Core  (STM32 + 2x ADC) -> Core      digitize, sequence, compute
+       8
+       9 External to the sandbox (modeled, NOT ModulUS boards):
+      10   Transducer (front)  |  Radio/BLE (downstream)  |  Battery (power source)
+     … +222 lines (ctrl+o to expand)
+
+● Bash(py -3.12 modulus.py)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\dev_material\modulus.py", line 19, in <module>
+         import numpy as np
+     ModuleNotFoundError: No module named 'numpy'
+
+● Bash(py -3.12 -m pip install numpy scipy -q 2>&1 | tail -1; echo "==="; py -3.12 modulus.py)
+  ⎿  [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+     ===
+     === Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===
+     … +11 lines (ctrl+o to expand)
+
+● The twin reproduces the flat-model numbers exactly — refactor is behavior-preserving. Removing the now-redundant flat file (DRY).
+
+● Bash(rm /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/dev_material/modulus_model.py && echo "removed modulus_model.py")
+  ⎿  removed modulus_model.py
+
+● modulus.py now is the canonical digital twin and the numbers are identical to before. Here's what we have:
+
+  modulus.py — the ModulUS digital twin (≈230 lines, research-tier)
+
+   EXTERNAL FRONT     Transducer   f_Tx → axial_res
+   ╔═ SANDBOX ════════════════════════════════════════════╗
+     Motherboard ≡ System.walk()   runs signal down the stack
+       Ping   .configure → duty;          .power → P_pulser
+       Echo   .bandwidth_factor(mode);    .process(rf)→envelope;  .power → P_afe
+       Core   .acquire → fs,N,ADC-wall;   .compute → data_rate;   .power → P_adc+P_mcu
+   ╚══════════════════════════════════════════════════════╝
+   EXTERNAL DOWN      Radio  data_rate→P_radio, BLE wall   [not ModulUS]
+   EXTERNAL POWER     Battery ΣP → cm³, g, CR2032          [not ModulUS]
+
+  Verified properties:
+
+  ┌───────────────────────────────────┬─────────────────────────────────────────────────┐
+  │               Check               │                     Result                      │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Numbers identical to flat model   │ ✓ exact (6.73/3.22/4.15 mW; FoM 0.67/0.32/0.41) │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ ADC wall splits classes           │ RF→EXT (FPGA), BWR/features→on-chip (MCU) ✓     │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ BLE wall at nRx=8                 │ RF & BWR OVER, features clears ✓                │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Acq filled as signal walks        │ duty←Ping, fs/N←Core, data_rate←Core ✓          │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ within_hw flag for nRx>8          │ present (extrapolation guard)                   │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Fail-soft load_traces + synthetic │ present (loud banner)                           │
+  ├───────────────────────────────────┼─────────────────────────────────────────────────┤
+  │ Deps                              │ numpy + scipy only (Colab-stock)                │
+  └───────────────────────────────────┴─────────────────────────────────────────────────┘
+
+  Two honest TODO markers left in the code, both already on our list:
+  - in-sandbox power constants (p_pulser, p_on, p_idle, p_feat) → anchor to PuLsE 5.8 mW so FoM lands ~0.6;
+  - synth_rf_envelope spectra not yet tuned to 2.9/0.7 MHz (irrelevant once your real traces arrive).
+
+  This is a good checkpoint. Want to review the code itself (open modulus.py and walk it together), or move to calibrating the in-sandbox constants to the PuLsE anchor so the FoM reads ~0.6 — then start assembling the notebook act by act?
+
+✻ Crunched for 3m 45s
+
+※ recap: We're building the CEEUS 2026 wearable-ultrasound workshop's Colab, starting with modulus.py, a hardware-mirrored power/battery model that's now working and verified. Next: calibrate the in-sandbox power constants to the PuLsE 5.8 mW anchor so the figure of merit reads
+  about 0.6.
+
+❯ can yhou please create the python code in the repo root: C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop>
+
+● Bash(mv /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/dev_material/modulus.py /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/modulus.p…)
+  ⎿  moved to repo root
+     === Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===
+     RF           fs= 20.0M  N=   779  dr=  0.234Mb/s  P=   6.73mW  FoM= 0.67  BLE=OK   ADC=EXT  res=0.385mm
+     BWR          fs=  5.0M  N=   195  dr=  0.058Mb/s  P=   3.22mW  FoM= 0.32  BLE=OK   ADC=on   res=0.385mm
+
+● Done. modulus.py is now at the repo root and runs identically:
+
+  C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\
+  ├── modulus.py            ← the digital twin (canonical code)
+  └── dev_material\         ← design/reference only
+      ├── ceeus2026_workshop_brief.md
+      ├── modulus_ius2025.pdf
+      └── modulus_ius2025_extracted.txt
+
+  Moved (not copied) so there's a single source of truth — no duplicate to drift.
+
+  Next, your pick: (1) walk modulus.py together for a code review, (2) calibrate the in-sandbox constants to the PuLsE 5.8 mW anchor so FoM reads ~0.6, or (3) start assembling the Colab notebook act by act on top of this module.
+
+✻ Crunched for 21s
+
+❯ create a requiremntes.txt and a strong .gitignore
+
+● Bash(cd /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop && ls -a && echo "---versions---" && py -3.12 -c "import numpy,scipy,matplotlib; print('numpy',…)
+  ⎿  Error: Exit code 1
+     .
+     ..
+     .git
+     .idea
+     .venv
+     README.md
+     dev_material
+     modulus.py
+     ---versions---
+     … +3 lines (ctrl+o to expand)
+
+● There's a .venv and .idea (PyCharm) — good, the .gitignore must cover both. Let me grab the versions, then write both files.
+
+● Bash(py -3.12 -c "import numpy,scipy; print(numpy.__version__, scipy.__version__)")
+  ⎿  2.4.6 1.17.1
+
+● Write(~\code\lab\academia\teaching\2026_ceeus_workshop\requirements.txt)
+
+● Write(~\code\lab\academia\teaching\2026_ceeus_workshop\.gitignore)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Create file
+ ..\.gitignore
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+   1 # ───────────────────────── Python ─────────────────────────
+   2 __pycache__/
+   3 *.py[cod]
+   4 *$py.class
+   5 *.so
+   6 .Python
+   7 build/
+   8 dist/
+   9 downloads/
+  10 *.egg-info/
+  11 .eggs/
+  12 *.egg
+  13 pip-log.txt
+  14 pip-delete-this-directory.txt
+  15
+  16 # ───────────────────── Virtual environments ───────────────
+  17 .venv/
+  18 venv/
+  19 env/
+  20 ENV/
+  21 .python-version
+  10 *.egg-info/
+  11 .eggs/
+  12 *.egg
+  13 pip-log.txt
+  14 pip-delete-this-directory.txt
+  15
+  16 # ───────────────────── Virtual environments ───────────────
+  17 .venv/
+  18 venv/
+  19 env/
+  20 ENV/
+  21 .python-version
+
+※ recap: We're building the CEEUS 2026 wearable-ultrasound workshop's Colab, starting with modulus.py, a hardware-mirrored power/battery model that's now working and verified. Next: calibrate the in-sandbox power constants to the PuLsE 5.8 mW anchor so the figure of merit reads
+  about 0.6.
+
+❯ can yhou please create the python code in the repo root: C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop>
+
+● Bash(mv /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/dev_material/modulus.py /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop/modulus.p…)
+  ⎿  moved to repo root
+     === Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===
+     RF           fs= 20.0M  N=   779  dr=  0.234Mb/s  P=   6.73mW  FoM= 0.67  BLE=OK   ADC=EXT  res=0.385mm
+     BWR          fs=  5.0M  N=   195  dr=  0.058Mb/s  P=   3.22mW  FoM= 0.32  BLE=OK   ADC=on   res=0.385mm
+
+● Done. modulus.py is now at the repo root and runs identically:
+
+  C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\
+  ├── modulus.py            ← the digital twin (canonical code)
+  └── dev_material\         ← design/reference only
+      ├── ceeus2026_workshop_brief.md
+      ├── modulus_ius2025.pdf
+      └── modulus_ius2025_extracted.txt
+
+  Moved (not copied) so there's a single source of truth — no duplicate to drift.
+
+  Next, your pick: (1) walk modulus.py together for a code review, (2) calibrate the in-sandbox constants to the PuLsE 5.8 mW anchor so FoM reads ~0.6, or (3) start assembling the Colab notebook act by act on top of this module.
+
+✻ Crunched for 21s
+
+❯ create a requiremntes.txt and a strong .gitignore
+
+● Bash(cd /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop && ls -a && echo "---versions---" && py -3.12 -c "import numpy,scipy,matplotlib; print('numpy',…)
+  ⎿  Error: Exit code 1
+     .
+     ..
+     .git
+     .idea
+     .venv
+     README.md
+     dev_material
+     modulus.py
+     ---versions---
+     … +3 lines (ctrl+o to expand)
+
+● There's a .venv and .idea (PyCharm) — good, the .gitignore must cover both. Let me grab the versions, then write both files.
+
+● Bash(py -3.12 -c "import numpy,scipy; print(numpy.__version__, scipy.__version__)")
+  ⎿  2.4.6 1.17.1
+
+● Write(~\code\lab\academia\teaching\2026_ceeus_workshop\requirements.txt)
+  ⎿  Wrote 14 lines to ..\requirements.txt
+       1 # CEEUS 2026 wearables workshop — ModulUS power/battery exercise
+       2 # Runtime deps are all pre-installed on Google Colab; pins are lower bounds
+       3 # for local development. Keep this list lean (research-tier).
+       4
+       5 # --- core model + plotting (used by modulus.py and the notebook) ---
+       6 numpy>=1.26
+       7 scipy>=1.11          # scipy.signal.hilbert / welch for the envelope + spectra
+       8 matplotlib>=3.7
+       9
+      10 # --- interactive notebook (the guided slider exploration) ---
+     … +4 lines (ctrl+o to expand)
+
+● Write(~\code\lab\academia\teaching\2026_ceeus_workshop\.gitignore)
+  ⎿  Wrote 83 lines to ..\.gitignore
+       1 # ───────────────────────── Python ─────────────────────────
+       2 __pycache__/
+       3 *.py[cod]
+       4 *$py.class
+       5 *.so
+       6 .Python
+       7 build/
+       8 dist/
+       9 downloads/
+      10 *.egg-info/
+     … +73 lines (ctrl+o to expand)
+
+● Let me verify git now ignores the right things and still tracks the source.
+
+● Bash(cd /c/Users/chule/code/lab/academia/teaching/2026_ceeus_workshop && git status --short && echo "--- ignored check ---" && git check-ignore -v .venv .idea modulu…)
+  ⎿  A  modulus.py
+     ?? .gitignore
+     ?? dev_material/
+     … +5 lines (ctrl+o to expand)
+
+● Working as intended:
+
+  ┌──────────────────────────────┬─────────────────────────┐
+  │             Item             │         Status          │
+  ├──────────────────────────────┼─────────────────────────┤
+  │ .venv/, .idea/               │ ✓ ignored               │
+  ├──────────────────────────────┼─────────────────────────┤
+  │ modulus.py, requirements.txt │ ✓ tracked (not ignored) │
+  ├──────────────────────────────┼─────────────────────────┤
+  │ dev_material/                │ untracked, ready to add │
+  └──────────────────────────────┴─────────────────────────┘
+
+  Created:
+  - requirements.txt — lean: numpy/scipy/matplotlib/ipywidgets (all Colab-stock) + jupyterlab for local work. Pins are lower bounds.
+  - .gitignore — covers Python caches, .venv, PyCharm .idea/VSCode, Jupyter checkpoints, OS cruft (Windows/macOS), test/lint caches, secrets, and generated data.
+
+  One gotcha to flag: the .gitignore ignores data formats (*.npz, *.csv, data/) by default, since acquired traces aren't source. But the demo traces you'll hand students (modulus_demo.npz) do need to ship with the notebook. When you have that file, commit it explicitly:
+
+  git add -f data/modulus_demo.npz
+
+  Or tell me your preferred distribution path (in-repo data/, Colab download link, or Google Drive mount) and I'll adjust both the .gitignore and load_traces() default path to match. Want me to set that up now, or carry on to the notebook / constant-calibration?
+
+✻ Cooked for 1m 7s
+
+❯ regarding the todos: (  - in-sandbox power constants (p_pulser, p_on, p_idle, p_feat) → anchor to PuLsE 5.8 mW so FoM lands ~0.6;) --> do not follow th pulse paper. instead use a generic number like 20mW, regarding syntheic envelope i would set this at around 2 mhz what is
+  next?
+
+● Two clear calls — applying both:
+
+  1. In-sandbox power: drop the PuLsE anchor, use a generic ~20 mW static budget. Cleaner for teaching — no false claim of reproducing a specific platform, just a defensible round baseline. I'll split it so the narrative holds (Tx cheap, MCU is the floor): Ping 1 mW + Echo 4 mW +
+  Core 15 mW = 20 mW static, centralized in one constants block so it's tunable in one place.
+  2. Synthetic RF at ~2 MHz (clean generic placeholder; the real 10 MHz traces replace it anyway).
+
+● Update(modulus.py)
+  ⎿  File must be read first
+
+  Read 1 file (ctrl+o to expand)
+
+● Now applying the edits:
+
+● Update(modulus.py)
+  ⎿  Added 9 lines
+      36  RHO_GRAV   = 230.0     # Wh/kg  Li-ion gravimetric density        ~
+      37  CR2032_WH  = 0.65      # Wh     reference coin cell               #
+      38
+      39 +# Generic in-sandbox STATIC power budget (~20 mW total). A round, defensible
+      40 +# baseline for the exercise -- deliberately NOT tied to a specific platform.
+      41 +# Split keeps the narrative: Tx is cheap, the MCU is the always-on floor.
+      42 +P_PING     = 1e-3      # W  Tx pulser housekeeping (low duty)     #
+      43 +P_ECHO     = 4e-3      # W  always-on analog AFE bias             #
+      44 +P_CORE     = 15e-3     # W  MCU + ADC ref + housekeeping (floor)  #
+      45 +P_ECHO_DYN = 3e-3      # W  AFE active, duty-scaled (small)       #
+      46 +P_FEAT     = 2e-3      # W  extra MCU draw in features mode       #
+      47
+      48 +
+      49  # ── Acquisition context: state filled as the signal walks the stack ───────
+      50  @dataclass
+      51  class Acq:
+
+● Update(modulus.py)
+  ⎿  Added 1 line, removed 1 line
+      73  # ── Ping = pulser board (STHVUP32 + T/R switch): send the pulse ───────────
+      74  @dataclass
+      75  class Ping:
+      76 -    p_pulser: float = 1e-3               # W  # anchor to PuLsE budget
+      76 +    p_pulser: float = P_PING             # W  generic, low-duty Tx
+      77      n_ch_max: int = N_CH_MAX
+      78
+      79      def configure(self, acq):
+
+● Update(modulus.py)
+  ⎿  Added 3 lines, removed 3 lines
+      87  @dataclass
+      88  class Echo:
+      89      bwr_factor: int = BWR_FACTOR
+      90 -    p_on: float = 3e-3                   # W active   #
+      91 -    p_leak: float = 50e-6               # W leakage  #
+      90 +    p_bias: float = P_ECHO               # W  always-on analog bias
+      91 +    p_on: float = P_ECHO_DYN             # W  active, duty-scaled
+      92
+      93      def bandwidth_factor(self, mode):
+      94          return 1 if mode == "RF" else self.bwr_factor   # how much it eases the ADC
+     ...
+       98          return np.abs(hilbert(rf))
+       99
+      100      def power(self, acq):
+      101 -        return self.p_on * acq.duty * acq.nRx + self.p_leak
+      101 +        return self.p_bias + self.p_on * acq.duty * acq.nRx
+      102
+      103
+      104  # ── Core = control board (STM32 + dual ADC): digitize, sequence, compute ──
+
+● Update(modulus.py)
+  ⎿  Added 2 lines, removed 2 lines
+      106  class Core:
+      107      fs_max: float = FS_ONCHIP
+      108      fom: float = ADC_FOM
+      109 -    p_idle: float = 1e-3                 # W  #
+      110 -    p_feat: float = 2e-3                # W  # on-device feature compute
+      109 +    p_idle: float = P_CORE               # W  MCU + housekeeping (the floor)
+      110 +    p_feat: float = P_FEAT               # W  on-device feature compute
+      111      n_features: int = N_FEATURES
+      112
+      113      def acquire(self, acq, echo):       # derive fs, N from transducer + Echo
+
+● Now the synthetic RF to ~2 MHz:
+
+● Update(modulus.py)
+  ⎿  Added 4 lines, removed 4 lines
+      184
+      185
+      186  # ── Demo-data twin: real ModulUS traces, or loud synthetic fallback ───────
+      187 -def synth_rf_envelope(fs=20e6, f_Tx=10e6, depths_mm=(20.0, 20.7), n_cycles=N_CYCLES):
+      188 -    """Two-echo RF trace (PET-disc upper/lower boundary) + its envelope.
+      189 -    Placeholder until real ModulUS traces are provided; spectra not yet tuned
+      190 -    to the paper's 2.9/0.7 MHz means (TODO when real data lands)."""
+      187 +def synth_rf_envelope(fs=20e6, f_Tx=2e6, depths_mm=(20.0, 21.5), n_cycles=N_CYCLES):
+      188 +    """Two-echo RF trace (disc upper/lower boundary) + its envelope.
+      189 +    Generic ~2 MHz placeholder until the real ModulUS traces are provided;
+      190 +    swapped out by load_traces() once the acquired .npz is present."""
+      191      t = np.arange(0, 60e-6, 1 / fs)
+      192      rf = np.zeros_like(t)
+      193      for d_mm in depths_mm:
+
+● Bash(py -3.12 modulus.py && echo "--- synth check ---" && py -3.12 -c "import modulus; rf,env,fs=modulus.synth_rf_envelope(); print('synth fs=%.0fMHz, samples=%d, pe…)
+  ⎿  === Operating point: 10 MHz, nRx=1, PRF=25 Hz, D=3 cm ===
+     RF           fs= 20.0M  N=   779  dr=  0.234Mb/s  P=  24.68mW  FoM= 2.47  BLE=OK   ADC=EXT  res=0.385mm
+     BWR          fs=  5.0M  N=   195  dr=  0.058Mb/s  P=  21.17mW  FoM= 2.12  BLE=OK   ADC=on   res=0.385mm
+     … +11 lines (ctrl+o to expand)
+
+● Both applied and verified. Updated picture:
+
+  OP-POINT (10 MHz, nRx=1, PRF=25 Hz)  — static-dominated by the 20 mW floor
+  mode       P_avg   FoM   BLE   ADC      ← device idles near the 20 mW baseline
+  RF        24.7mW  2.47   ok    EXT
+  BWR       21.2mW  2.12   ok    on
+  features  22.1mW  2.21   ok    on
+
+  WALL DEMO (10 MHz, nRx=8, PRF=100 Hz) — radio explodes past the floor
+  RF       169.8mW  2.12   OVER  EXT   ← 150 mW of that is the radio
+  BWR       57.5mW  0.72   OVER  on
+  features  25.2mW  0.31   ok    on    ← only survivor
+
+  Battery (BWR op-pt, 1 day): 1.27 cm³, 2.2 g, 0.78 CR2032
+
+  The lesson is actually sharper now: at rest the device sits at its ~20 mW floor; push toward real imaging (nRx, PRF, RF) and the radio dwarfs everything — exactly the mW/MHz thesis. Walls still split cleanly (RF/BWR break BLE, features survives). Synth RF now generates at 2
+  MHz. Recording the decision.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Where we are / what's next
+
+  The model layer is done and validated. Here's the full remaining roadmap:
+
+   [✓] DONE
+    ✓ read brief + paper, set 4 expert lenses
+    ✓ spine + 3-act narrative locked (signal → cost → system)
+    ✓ digital twin built: modulus.py (Ping/Echo/Core/Motherboard + externals)
+    ✓ numbers validated; generic 20 mW budget; 2 MHz synth; repo hygiene
+
+   [→ NEXT]  build the Colab notebook on top of modulus.py
+    1. notebook cell skeleton  ← zoom-out review first (per our rhythm)
+    2. Act 1 — Signal   (load traces, FFT, resolution)
+    3. Act 2 — Cost     (Nyquist, data_rate, the two walls, widgets)
+    4. Act 3 — System   (power → battery, then INVERT the chain)
+    5. TODO cells + self-check asserts (two-tier scaffolding)
+
+   [LATER]
+    - 4 diagram slides (1, 4, 11, 17)
+    - deck text + hardware slide using Ping/Echo/Core vocabulary
+    - lock BLE literature citations (E_bit, R_BLE_MAX) via WebSearch
+    - wire your real ModulUS .npz into load_traces
+
+  Per our zoom-out-first rhythm, the immediate next step is the notebook cell skeleton — the ordered list of cells (markdown + code + TODO + widget), mapped to the three acts, for you to review before I write any cell content. That's the architectural sketch of the notebook
+  itself.
+
+  Want me to lay out that skeleton now?
+
+✻ Brewed for 3m 39s
+
+❯ for the notebook to remember is that this is a notebook that shjould run in google colab out of the git repo. I suggest to checkout another repo https://github.com/luuleitner/dasIT to see if you can reuse functions from there (using it as an import in colab)
+
+● Good constraints — Colab-from-repo (the notebook clones/pulls this repo at runtime) and reuse dasIT where it helps. Let me clone and inspect dasIT to see what's importable.
+
+● Bash(rm -rf /tmp/dasIT && git clone --depth 1 https://github.com/luuleitner/dasIT /tmp/dasIT 2>&1 | tail -3 && echo "=== TREE ===" && find /tmp/dasIT -type f -not -p…)
+  ⎿  Cloning into 'C:/Users/chule/AppData/Local/Temp/dasIT'...
+     === TREE ===
+     /tmp/dasIT/.gitignore
+     … +58 lines (ctrl+o to expand)
+
+● dasIT is your own delay-and-sum beamforming teaching toolbox — already a Colab-from-repo notebook. Very relevant. Let me read the pieces most likely to reuse: the Colab bootstrap, the physics modules, and the interactive-widget callbacks.
+
+  Searched for 1 pattern, read 10 files (ctrl+o to expand)
+
+● Now the key bit — how the dasIT Colab bootstraps from the repo:
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+● Explored it fully. dasIT is your 2022 plane-wave delay-and-sum teaching toolbox, and it already solves the Colab-from-repo problem with a clean pattern we should copy — plus it has signal/plot functions that cover our Act 1 almost entirely. This is a strong reuse opportunity.
+
+  dasIT's Colab bootstrap pattern (reuse verbatim)
+
+  # cell 1: install the package straight from GitHub (no clone needed)
+  !pip install git+https://github.com/luuleitner/dasIT
+  # cell 2: fetch example data via a URL manifest
+  !wget -i https://raw.githubusercontent.com/luuleitner/dasIT/main/example_data/.../COLABdownload_url.txt
+  # cell 3: import
+  from dasIT.features.signal import fftsignal, analytic_signal, RFfilter
+  setup.py + find_packages() makes it pip install git+-able. wget -i <manifest.txt> pulls data from raw.githubusercontent. We mirror both.
+
+  Reuse map — what carries over
+
+  ┌────────────────────────────────────────────────────┬─────────────────────────────────────────────────┬────────────────────────────────────────────────────────────────┐
+  │                   dasIT function                   │                     Our use                     │                            Verdict                             │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ features.signal.fftsignal (Welch PSD, returns MHz) │ Act 1 spectral check: raw 2.9 → env 0.7 MHz     │ reuse direct — exactly TODO-(a)                                │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ visualization.signal_callback.amp_freq_1channel    │ Act 1: raw RF + spectrum vs envelope + spectrum │ reuse (pass envelope as the "filtered" trace)                  │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ features.signal.analytic_signal / envelope         │ Hilbert envelope on real RF                     │ reuse → replaces our Echo.process one-liner (DRY across repos) │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ features.signal.RFfilter (Gaussian bandpass)       │ model the AFE bandwidth reduction on real RF    │ reuse (optional, EE-tier "go deeper")                          │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ data.loader.RFDataloader (multi-frame H5)          │ our data is simple RF+env npz                   │ skip — our load_traces is the right shape                      │
+  ├────────────────────────────────────────────────────┼─────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ features.transducer / medium classes               │ beamforming-oriented (pitch, apertures, grids)  │ skip — our twin is leaner for this purpose                     │
+  └────────────────────────────────────────────────────┴─────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────┘
+
+  The clean division of labor this creates
+
+   dasIT      = SIGNAL domain   → load, filter, envelope, FFT, plot   → Act 1
+   modulus.py = SYSTEM spine    → Nyquist, data, power, battery       → Acts 2–3
+  dasIT has no power/system model; modulus.py has no signal toolkit. They compose perfectly, and students who did your beamforming Colab meet the same tools — pedagogical continuity.
+
+  Let me record this, then I need three decisions from you to wire it up.
+
+  Wrote 2 memories (ctrl+o to expand)
+
+● Three decisions to wire the Colab to the repos
+
+  1. Workshop repo GitHub slug. The bootstrap needs it (pip install git+https://github.com/<slug> and the wget data manifest). What will this repo be — e.g. luuleitner/ceeus2026-wearables? (Tell me the slug, or that it's not on GitHub yet and I'll template a placeholder.)
+
+  2. How modulus.py reaches Colab — modulus.py is one self-contained file, so:
+
+  ┌────────────────────────────────────────────────┬─────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────┐
+  │                     Option                     │                    Bootstrap                    │                                   Trade-off                                   │
+  ├────────────────────────────────────────────────┼─────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────┤
+  │ A — pip-installable (add setup.py, like dasIT) │ !pip install git+… → from modulus import System │ consistent with dasIT, clean import; tiny packaging file; reinstall to update │
+  ├────────────────────────────────────────────────┼─────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────┤
+  │ B — clone the repo                             │ !git clone … → import modulus                   │ students can browse notebook + code + data in the file tree (sandbox feel)    │
+  ├────────────────────────────────────────────────┼─────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────┤
+  │ C — wget the single file                       │ !wget raw…/modulus.py                           │ leanest, instant swap; but "one file," not "the repo"                         │
+  └────────────────────────────────────────────────┴─────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────┘
+
+  My lean: B (clone) — you said "run out of the git repo," and a workshop benefits from students seeing modulus.py next to the notebook. dasIT hid its source via pip because it's a library; ours is a sandbox, so exposing the source fits.
+
+  3. dasIT reuse mechanism — you suggested importing it; I agree: !pip install git+https://github.com/luuleitner/dasIT and import its signal/plot functions for Act 1. (Alternative would be vendoring 3 functions, but importing keeps DRY and ties to your existing toolbox.) Confirm?
+
+  Once you give me the slug + pick 2, I'll: add the bootstrap cell, set up the data path (un-ignoring example_data/ for the committed demo .npz), and then we do the notebook cell skeleton for review. Anything to adjust?
+
+✻ Brewed for 2m 28s
+
+❯ ok. please check against the SoA in google colab programming and suggest different alternatives if needed else proceed
+
+● Good call — let me verify the plan against current Colab practice before committing, especially the riskiest piece (interactive widgets in Colab, which has historically been finicky). Loading web tools.
+
+● Web Search("ipywidgets interact Google Colab 2025 support best practices interactive sliders")
+  ⎿  Did 1 search in 7s
+
+● Web Search("Google Colab notebook from GitHub repo pip install vs git clone best practice 2025 teaching")
+  ⎿  Did 1 search in 9s
+
+● SoA check done. The plan holds and matches current Colab practice — with four refinements, none blocking.
+
+  SoA findings vs our plan
+
+  ┌──────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │    Topic     │                                                      SoA (2025–26)                                                      │                                                          Verdict on our plan                                                           │
+  ├──────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Repo access  │ pip install git+ for libs you don't edit; git clone when students browse/modify code                                    │ Refine to mixed: pip-install dasIT (external lib, like dasIT's own pattern); clone our repo (it's a sandbox — students should see      │
+  │              │                                                                                                                         │ modulus.py)                                                                                                                            │
+  ├──────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ipywidgets   │ pre-installed; interact sliders work reliably; non-slider/custom widgets can trigger the "third-party widget from CDN"  │ Use interact with sliders/dropdowns only; avoid custom widget trees; pin ipywidgets in requirements                                    │
+  │              │ warning                                                                                                                 │                                                                                                                                        │
+  ├──────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Runtime      │ ephemeral VM (~90 min idle) → bootstrap must re-run each session                                                        │ Add idempotent bootstrap (if not exists: clone) + IN_COLAB guard so it also runs locally                                               │
+  ├──────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Distribution │ "Open in Colab" badge; strip outputs before commit                                                                      │ Add badge to README + nbstripout (clean diffs)                                                                                         │
+  └──────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  The one genuine alternative worth naming: Colab @param form fields instead of ipywidgets — bulletproof (no CDN/JS layer), but Colab-only and re-runs the whole cell. I'm keeping interact sliders (portable, live, well-supported for sliders, matches the brief) with @param as the
+  documented fallback if a live-demo hiccup ever appears.
+
+  Net: proceed, folding in mixed repo-access + the robustness guards. Using a placeholder slug luuleitner/<workshop-repo> until you give the real one.
+
+  Sources: ipywidgets in Colab (https://www.plus2net.com/python/ipywidgets.php), colabtools #3020 (https://github.com/googlecolab/colabtools/issues/3020), pip vs clone for Colab teaching (https://pythonforbegineers.com/installing-custom-python-modules-in-google-colab/),
+  Colab+GitHub integration (https://www.tilburgsciencehub.com/topics/automation/replicability/cloud-computing/colab-github/).
+
+  ---
+  Proceeding → notebook cell skeleton (zoom-out, for your review before I write cells)
+
+   ── FRONT MATTER ─────────────────────────────────────────────
+   C0  md   title · Open-in-Colab badge · learning objectives · 30-sec spine roadmap
+   C1  code BOOTSTRAP: IN_COLAB guard → pip install dasIT · clone our repo (+sys.path)
+            · wget demo data · imports · "✓ ready" version print
+
+   ── ACT 1 · SIGNAL  "what's in here?" ────────────────────────
+   C2  md   the echo, Ping→Echo; two representations of one signal
+   C3  code load_traces() (real or loud synthetic) · plot raw RF
+   C4  code raw RF vs envelope — time + spectrum   [reuse dasIT fftsignal, amp_freq_1channel]
+   C5  TODO(a) compute spectral means → confirm ~4× (2.9 vs 0.7 MHz)  + self-check assert
+   C6  md   resolution = f(f_Tx): axial_res + the scale ladder (hair / seed / cell)
+
+   ── ACT 2 · COST  "what's it cost to capture & move?" ─────────
+   C7  md   Nyquist → samples → data_rate; the two walls (ADC, BLE)
+   C8  code build System; print fs/N/data_rate at the 10 MHz op-point
+   C9  TODO(b) fill the data_rate line  + self-check assert
+   C10 code STAGE 1 — interact() mode LOCKED=RF: drag battery target → can't beat BLE
+   C11 md   "the battery was never the problem"
+
+   ── ACT 3 · SYSTEM  "can this be a wearable?" ─────────────────
+   C12 md   power → battery → wearability
+   C13 code STAGE 2 — interact() mode UNLOCKED: power bar + battery cm³/g/CR2032 + FoM → the "oh"
+   C14 TODO(c) reflection: at what nRx does BWR also hit the wall? your escape?
+   C15 code INVERT — given wrist budget (3–5 cm³), what f_Tx/nRx/mode survives?  (assessable finale)
+   C16 md   recap spine · three escape routes · what's unsolved (→ talk slide 16)
+
+   ── BACKUP (EE-tier "go deeper") ──────────────────────────────
+   C17 code RFfilter AFE model on real RF · dual-ADC multiplexing note · refs
+
+  This maps 1:1 onto the three acts, plants the envelope in Act 1 → cashes it in Act 3, ends on the invertible (gradeable) exercise, and reuses dasIT exactly where it fits (C4/C5).
+
+  Sign off on this skeleton (or tell me what to move/cut) and I'll build it cell by cell, starting with front matter + bootstrap (C0–C1), which we review before I continue into Act 1.
+
+✻ Sautéed for 2m 2s
+
+❯ ok
+
+● Building C0–C1 now. To keep the notebook reproducible and clean (SoA for notebook-as-code), I'll generate the .ipynb from a small nbformat builder rather than hand-editing JSON — so each cell is reviewable Python and future cells append cleanly.
+
+● Bash(py -3.12 -c "import nbformat; print('nbformat', nbformat.__version__)" 2>&1 || py -3.12 -m pip install -q nbformat 2>&1 | tail -1)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+     ModuleNotFoundError: No module named 'nbformat'
+     [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Create file
+ dev_material\build_notebook.py
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+   1 """Builder for the CEEUS 2026 workshop Colab notebook (notebook-as-code).
+   2
+   3 Run:  py -3.12 dev_material/build_notebook.py
+   4 Output: ceeus2026_modulus_power.ipynb at the repo root.
+   5
+   6 Cells are appended in order; extend CELLS as we build act by act. Keeping the
+   7 notebook generated (not hand-edited JSON) gives clean diffs and one source.
+   8 """
+   9 import nbformat as nbf
+  10 from pathlib import Path
+  11
+  12 SLUG = "luuleitner/ceeus2026-wearables"          # TODO: confirm GitHub slug
+  13 NB_NAME = "ceeus2026_modulus_power.ipynb"
+  14 REPO_ROOT = Path(__file__).resolve().parents[1]
+  15
+  16 nb = nbf.v4.new_notebook()
+  17 md = nbf.v4.new_markdown_cell
+  18 code = nbf.v4.new_code_cell
+  19 CELLS = []
+  20
+  21 # ── C0 · front matter ────────────────────────────────────────────────────
+  22 CELLS.append(md(f"""\
+  21 # ── C0 · front matter ────────────────────────────────────────────────────
+  22 CELLS.append(md(f"""\
+  ├──────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Distribution │ "Open in Colab" badge; strip outputs before commit                                                                      │ Add badge to README + nbstripout (clean diffs)                                                                                         │
+  └──────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  The one genuine alternative worth naming: Colab @param form fields instead of ipywidgets — bulletproof (no CDN/JS layer), but Colab-only and re-runs the whole cell. I'm keeping interact sliders (portable, live, well-supported for sliders, matches the brief) with @param as the
+  documented fallback if a live-demo hiccup ever appears.
+
+  Net: proceed, folding in mixed repo-access + the robustness guards. Using a placeholder slug luuleitner/<workshop-repo> until you give the real one.
+
+  Sources: ipywidgets in Colab (https://www.plus2net.com/python/ipywidgets.php), colabtools #3020 (https://github.com/googlecolab/colabtools/issues/3020), pip vs clone for Colab teaching (https://pythonforbegineers.com/installing-custom-python-modules-in-google-colab/),
+  Colab+GitHub integration (https://www.tilburgsciencehub.com/topics/automation/replicability/cloud-computing/colab-github/).
+
+  ---
+  Proceeding → notebook cell skeleton (zoom-out, for your review before I write cells)
+
+   ── FRONT MATTER ─────────────────────────────────────────────
+   C0  md   title · Open-in-Colab badge · learning objectives · 30-sec spine roadmap
+   C1  code BOOTSTRAP: IN_COLAB guard → pip install dasIT · clone our repo (+sys.path)
+            · wget demo data · imports · "✓ ready" version print
+
+   ── ACT 1 · SIGNAL  "what's in here?" ────────────────────────
+   C2  md   the echo, Ping→Echo; two representations of one signal
+   C3  code load_traces() (real or loud synthetic) · plot raw RF
+   C4  code raw RF vs envelope — time + spectrum   [reuse dasIT fftsignal, amp_freq_1channel]
+   C5  TODO(a) compute spectral means → confirm ~4× (2.9 vs 0.7 MHz)  + self-check assert
+   C6  md   resolution = f(f_Tx): axial_res + the scale ladder (hair / seed / cell)
+
+   ── ACT 2 · COST  "what's it cost to capture & move?" ─────────
+   C7  md   Nyquist → samples → data_rate; the two walls (ADC, BLE)
+   C8  code build System; print fs/N/data_rate at the 10 MHz op-point
+   C9  TODO(b) fill the data_rate line  + self-check assert
+   C10 code STAGE 1 — interact() mode LOCKED=RF: drag battery target → can't beat BLE
+   C11 md   "the battery was never the problem"
+
+   ── ACT 3 · SYSTEM  "can this be a wearable?" ─────────────────
+   C12 md   power → battery → wearability
+   C13 code STAGE 2 — interact() mode UNLOCKED: power bar + battery cm³/g/CR2032 + FoM → the "oh"
+   C14 TODO(c) reflection: at what nRx does BWR also hit the wall? your escape?
+   C15 code INVERT — given wrist budget (3–5 cm³), what f_Tx/nRx/mode survives?  (assessable finale)
+   C16 md   recap spine · three escape routes · what's unsolved (→ talk slide 16)
+
+   ── BACKUP (EE-tier "go deeper") ──────────────────────────────
+   C17 code RFfilter AFE model on real RF · dual-ADC multiplexing note · refs
+
+  This maps 1:1 onto the three acts, plants the envelope in Act 1 → cashes it in Act 3, ends on the invertible (gradeable) exercise, and reuses dasIT exactly where it fits (C4/C5).
+
+  Sign off on this skeleton (or tell me what to move/cut) and I'll build it cell by cell, starting with front matter + bootstrap (C0–C1), which we review before I continue into Act 1.
+
+✻ Sautéed for 2m 2s
+
+❯ ok
+
+● Building C0–C1 now. To keep the notebook reproducible and clean (SoA for notebook-as-code), I'll generate the .ipynb from a small nbformat builder rather than hand-editing JSON — so each cell is reviewable Python and future cells append cleanly.
+
+● Bash(py -3.12 -c "import nbformat; print('nbformat', nbformat.__version__)" 2>&1 || py -3.12 -m pip install -q nbformat 2>&1 | tail -1)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+     ModuleNotFoundError: No module named 'nbformat'
+     [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+
+● Write(dev_material\build_notebook.py)
+  ⎿  Wrote 84 lines to dev_material\build_notebook.py
+       1 """Builder for the CEEUS 2026 workshop Colab notebook (notebook-as-code).
+       2
+       3 Run:  py -3.12 dev_material/build_notebook.py
+       4 Output: ceeus2026_modulus_power.ipynb at the repo root.
+       5
+       6 Cells are appended in order; extend CELLS as we build act by act. Keeping the
+       7 notebook generated (not hand-edited JSON) gives clean diffs and one source.
+       8 """
+       9 import nbformat as nbf
+      10 from pathlib import Path
+     … +74 lines (ctrl+o to expand)
+
+● Bash(py -3.12 -m pip install -q nbformat 2>&1 | tail -1; py -3.12 dev_material/build_notebook.py && echo "--- validate ---" && py -3.12 -c "import nbformat; nb=nbfor…)
+  ⎿  [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+     wrote C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\ceeus2026_modulus_power.ipynb  (2 cells)
+     --- validate ---
+     valid notebook, 2 cells: ['markdown', 'code']
+
+● Built and validated — ceeus2026_modulus_power.ipynb (2 cells) at repo root, generated from dev_material/build_notebook.py. Here's what's in C0–C1 for your review:
+
+  C0 — front matter (markdown, rendered)
+
+  ▎ ModulUS Power & Architecture Sandbox
+  ▎
+  ▎ From echo to wearable: resolution → data → power → battery
+  ▎
+  ▎ [Open In Colab badge] · CEEUS 2026 Wearables Workshop · Christoph Leitner (ETH Zurich, IIS)
+  ▎
+  ▎ By the end you can — identify the Ping→Echo→Core chain and what each costs · estimate data rate and power from first principles · classify fit against the ADC and BLE limits · compare RF/envelope/feature on mW/MHz · justify an architecture for a wrist budget.
+  ▎
+  ▎ Roadmap = the spine: resolution → frequency → Nyquist → data rate → power → battery → wearability, split across the three acts.
+
+  Assessable verbs only (identify/estimate/classify/compare/justify) — the objectives are gradeable, and the last one is the closing exercise.
+
+  C1 — bootstrap (code)
+
+  # === Bootstrap — run me first ===
+  import sys, os
+  IN_COLAB = "google.colab" in sys.modules
+  SLUG = "luuleitner/ceeus2026-wearables"   # TODO: confirm GitHub slug
+  REPO = SLUG.split("/")[1]
+
+  if IN_COLAB:
+      try:
+          import dasIT                       # external signal/plot toolbox
+      except ImportError:
+          !pip install -q git+https://github.com/luuleitner/dasIT
+      if not os.path.isdir(REPO):            # our sandbox: clone (browse modulus.py + data)
+  ▎ By the end you can — identify the Ping→Echo→Core chain and what each costs · estimate data rate and power from first principles · classify fit against the ADC and BLE limits · compare RF/envelope/feature on mW/MHz · justify an architecture for a wrist budget.
+  ▎
+  ▎ Roadmap = the spine: resolution → frequency → Nyquist → data rate → power → battery → wearability, split across the three acts.
+
+  Assessable verbs only (identify/estimate/classify/compare/justify) — the objectives are gradeable, and the last one is the closing exercise.
+
+  C1 — bootstrap (code)
+
+  # === Bootstrap — run me first ===
+  import sys, os
+  IN_COLAB = "google.colab" in sys.modules
+  SLUG = "luuleitner/ceeus2026-wearables"   # TODO: confirm GitHub slug
+  REPO = SLUG.split("/")[1]
+
+  if IN_COLAB:
+      try:
+          import dasIT                       # external signal/plot toolbox
+      except ImportError:
+          !pip install -q git+https://github.com/luuleitner/dasIT
+      if not os.path.isdir(REPO):            # our sandbox: clone (browse modulus.py + data)
+          !git clone -q https://github.com/{SLUG}
+      sys.path.insert(0, REPO)
+      DATA = os.path.join(REPO, "example_data", "modulus_demo.npz")
+  else:
+      sys.path.insert(0, ".")                # local: repo root
+      DATA = os.path.join("example_data", "modulus_demo.npz")
+
+  import numpy as np, matplotlib.pyplot as plt
+  from modulus import System, Acq, load_traces, fom_mw_per_mhz
+  from dasIT.features.signal import fftsignal, analytic_signal, envelope
+  print("ready —", "Colab" if IN_COLAB else "local")
+
+  Folds in every SoA refinement: IN_COLAB guard (runs locally too), idempotent clone, pip-dasIT / clone-our-repo split, data path resolved for both environments.
+
+  Two open items this surfaces (both already on the list, not blocking):
+  - slug luuleitner/ceeus2026-wearables is a placeholder — give me the real one when ready.
+  - example_data/modulus_demo.npz needs to exist + be committed (and example_data/ un-ignored). I'll set that up when we wire Act 1's data loading.
+
+  Sign off on C0–C1 and I'll build Act 1 (C2–C6) — load + visualize the signal, the spectral 4× check (reusing dasIT), and the resolution scale-ladder — then we review that block.
+
+✻ Crunched for 2m 39s
+
+❯
+  ok
+
+● Building Act 1 (C2–C7). First let me install dasIT locally so I can actually execute the Act 1 logic (the dasIT reuse + the self-check assert) and confirm it runs before showing you.
+
+● Bash(py -3.12 -m pip install -q "git+https://github.com/luuleitner/dasIT" 2>&1 | tail -3; echo "==="; py -3.12 -c "from dasIT.features.signal import fftsignal, analy…)
+  ⎿  [notice] A new release of pip is available: 25.0.1 -> 26.1.2
+     [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+     ===
+     dasIT import OK
+
+● dasIT reuse works. Now let me verify the Act 1 computation (synthetic data → spectral means → the self-check) actually passes before I wire it into cells:
+
+● Bash(py -3.12 -c "
+      import numpy as np…)
+  ⎿  ============================================================
+       SYNTHETIC DATA  - real ModulUS file not found:
+         nonexistent.npz
+     … +9 lines (ctrl+o to expand)
+
+● Act 1 logic passes (synthetic shows the reduction; real data will read ~4×), and the resolution ladder matches. Note: I dropped dasIT's amp_freq_1channel for a custom plot — its hardcoded "raw vs filtered" labels would mislabel the envelope — but I keep reusing dasIT's
+  fftsignal for the spectra. Adding the cells to the builder:
+
+● Update(dev_material\build_notebook.py)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Edit file
+ dev_material\build_notebook.py
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+  78  print("ready —", "Colab" if IN_COLAB else "local")
+  79  """))
+  80
+  81 +# ── ACT 1 · SIGNAL — "what is in here?" ──────────────────────────────────
+  82 +CELLS.append(md("""\
+  83 +## Act 1 · The signal — *what is in here?*
+  84 +
+  85 +A wearable probe sends a short **ping** (a few-cycle pulse) and listens for **echoes**.
+  86 +ModulUS exposes two views of the *same* echo:
+  87 +
+  88 +- **RF** — the raw radio-frequency waveform off the transducer (Ping → Core).
+  89 +- **Envelope** — the RF after the analog **Echo** board strips the carrier, keeping the echo's shape.
+  90 +
+  91 +Both tell you *where* the reflectors are. They differ in **bandwidth** — and that
+  92 +difference is the lever this whole sandbox turns on. Let's look at one real measurement.
+  93 +"""))
+  94 +
+  95 +CELLS.append(code("""\
+  96 +# Load ONE ModulUS measurement (real .npz if present, else a labeled synthetic stand-in)
+  97 +rf, env, fs = load_traces(DATA)
+  98 +t_us = np.arange(len(rf)) / fs * 1e6          # time axis [µs]
+  99 +
+ 100 +plt.figure(figsize=(8, 3))
+ 101 +plt.plot(t_us, rf, lw=0.8)
+ 102 +plt.xlabel("time [µs]"); plt.ylabel("amplitude")
+ 103 +plt.title(f"Raw RF echo   (fs = {fs/1e6:.0f} Msps,  {len(rf)} samples)")
+ 104 +plt.tight_layout(); plt.show()
+ 105 +"""))
+ 106 +
+ 107 +CELLS.append(code("""\
+ 108 +# Same echo, two representations — in time and in frequency.
+ 109 +# Spectra via dasIT's Welch helper (returns frequency already in MHz).
+ 110 +f_rf,  P_rf  = fftsignal(rf,  fs)
+  Assessable verbs only (identify/estimate/classify/compare/justify) — the objectives are gradeable, and the last one is the closing exercise.
+
+  C1 — bootstrap (code)
+
+  # === Bootstrap — run me first ===
+  import sys, os
+  IN_COLAB = "google.colab" in sys.modules
+  SLUG = "luuleitner/ceeus2026-wearables"   # TODO: confirm GitHub slug
+  REPO = SLUG.split("/")[1]
+
+  if IN_COLAB:
+      try:
+          import dasIT                       # external signal/plot toolbox
+      except ImportError:
+          !pip install -q git+https://github.com/luuleitner/dasIT
+      if not os.path.isdir(REPO):            # our sandbox: clone (browse modulus.py + data)
+          !git clone -q https://github.com/{SLUG}
+      sys.path.insert(0, REPO)
+      DATA = os.path.join(REPO, "example_data", "modulus_demo.npz")
+  else:
+      sys.path.insert(0, ".")                # local: repo root
+      DATA = os.path.join("example_data", "modulus_demo.npz")
+
+  import numpy as np, matplotlib.pyplot as plt
+  from modulus import System, Acq, load_traces, fom_mw_per_mhz
+  from dasIT.features.signal import fftsignal, analytic_signal, envelope
+  print("ready —", "Colab" if IN_COLAB else "local")
+
+  Folds in every SoA refinement: IN_COLAB guard (runs locally too), idempotent clone, pip-dasIT / clone-our-repo split, data path resolved for both environments.
+
+  Two open items this surfaces (both already on the list, not blocking):
+  - slug luuleitner/ceeus2026-wearables is a placeholder — give me the real one when ready.
+  - example_data/modulus_demo.npz needs to exist + be committed (and example_data/ un-ignored). I'll set that up when we wire Act 1's data loading.
+
+  Sign off on C0–C1 and I'll build Act 1 (C2–C6) — load + visualize the signal, the spectral 4× check (reusing dasIT), and the resolution scale-ladder — then we review that block.
+
+✻ Crunched for 2m 39s
+
+❯
+  ok
+
+● Building Act 1 (C2–C7). First let me install dasIT locally so I can actually execute the Act 1 logic (the dasIT reuse + the self-check assert) and confirm it runs before showing you.
+
+● Bash(py -3.12 -m pip install -q "git+https://github.com/luuleitner/dasIT" 2>&1 | tail -3; echo "==="; py -3.12 -c "from dasIT.features.signal import fftsignal, analy…)
+  ⎿  [notice] A new release of pip is available: 25.0.1 -> 26.1.2
+     [notice] To update, run: C:\Users\chule\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+     ===
+     dasIT import OK
+
+● dasIT reuse works. Now let me verify the Act 1 computation (synthetic data → spectral means → the self-check) actually passes before I wire it into cells:
+
+● Bash(py -3.12 -c "
+      import numpy as np…)
+  ⎿  ============================================================
+       SYNTHETIC DATA  - real ModulUS file not found:
+         nonexistent.npz
+     … +9 lines (ctrl+o to expand)
+
+● Act 1 logic passes (synthetic shows the reduction; real data will read ~4×), and the resolution ladder matches. Note: I dropped dasIT's amp_freq_1channel for a custom plot — its hardcoded "raw vs filtered" labels would mislabel the envelope — but I keep reusing dasIT's
+  fftsignal for the spectra. Adding the cells to the builder:
+
+● Update(dev_material\build_notebook.py)
+  ⎿  Added 89 lines
+       78  print("ready —", "Colab" if IN_COLAB else "local")
+       79  """))
+       80
+       81 +# ── ACT 1 · SIGNAL — "what is in here?" ──────────────────────────────────
+       82 +CELLS.append(md("""\
+       83 +## Act 1 · The signal — *what is in here?*
+       84 +
+       85 +A wearable probe sends a short **ping** (a few-cycle pulse) and listens for **echoes**.
+       86 +ModulUS exposes two views of the *same* echo:
+       87 +
+       88 +- **RF** — the raw radio-frequency waveform off the transducer (Ping → Core).
+       89 +- **Envelope** — the RF after the analog **Echo** board strips the carrier, keeping the echo's shape.
+       90 +
+       91 +Both tell you *where* the reflectors are. They differ in **bandwidth** — and that
+       92 +difference is the lever this whole sandbox turns on. Let's look at one real measurement.
+       93 +"""))
+       94 +
+       95 +CELLS.append(code("""\
+       96 +# Load ONE ModulUS measurement (real .npz if present, else a labeled synthetic stand-in)
+       97 +rf, env, fs = load_traces(DATA)
+       98 +t_us = np.arange(len(rf)) / fs * 1e6          # time axis [µs]
+       99 +
+      100 +plt.figure(figsize=(8, 3))
+      101 +plt.plot(t_us, rf, lw=0.8)
+      102 +plt.xlabel("time [µs]"); plt.ylabel("amplitude")
+      103 +plt.title(f"Raw RF echo   (fs = {fs/1e6:.0f} Msps,  {len(rf)} samples)")
+      104 +plt.tight_layout(); plt.show()
+      105 +"""))
+      106 +
+      107 +CELLS.append(code("""\
+      108 +# Same echo, two representations — in time and in frequency.
+      109 +# Spectra via dasIT's Welch helper (returns frequency already in MHz).
+      110 +f_rf,  P_rf  = fftsignal(rf,  fs)
+      111 +f_env, P_env = fftsignal(env, fs)
+      112 +
+      113 +fig, ax = plt.subplots(1, 2, figsize=(10, 3.2))
+      114 +ax[0].plot(t_us, rf,  lw=0.7, label="RF")
+      115 +ax[0].plot(t_us, env, lw=1.6, label="envelope")
+      116 +ax[0].set_xlabel("time [µs]"); ax[0].set_ylabel("amplitude")
+      117 +ax[0].set_title("time domain"); ax[0].legend()
+      118 +ax[1].plot(f_rf,  P_rf,  label="RF")
+      119 +ax[1].plot(f_env, P_env, label="envelope")
+      120 +ax[1].set_xlabel("frequency [MHz]"); ax[1].set_ylabel("power")
+      121 +ax[1].set_title("spectrum"); ax[1].set_xlim(0, fs/2e6); ax[1].legend()
+      122 +plt.tight_layout(); plt.show()
+      123 +"""))
+      124 +
+      125 +CELLS.append(code("""\
+      126 +# TODO (a) — compute the power-weighted MEAN frequency of each spectrum.
+      127 +# Formula (ModulUS paper, eq. 2):   f_mean = sum(f_i * P_i) / sum(P_i)
+      128 +# Use the arrays from the previous cell: f_rf, P_rf  and  f_env, P_env.
+      129 +raw_mean = ...     # <-- replace ... using f_rf and P_rf
+      130 +env_mean = ...     # <-- replace ... using f_env and P_env
+      131 +
+      132 +# ---- self-check (do not edit) -------------------------------------------
+      133 +assert raw_mean is not ... and env_mean is not ..., "fill in raw_mean and env_mean above"
+      134 +assert env_mean < raw_mean, "the envelope should sit at LOWER frequency than the RF"
+      135 +ratio = raw_mean / env_mean
+      136 +print(f"RF mean ~ {raw_mean:.2f} MHz    envelope mean ~ {env_mean:.2f} MHz")
+      137 +print(f"bandwidth reduction ~ {ratio:.1f}x   (ModulUS paper: 2.9 -> 0.7 MHz ~ 4x)")
+      138 +assert ratio > 2, "expected a clear (>2x) reduction - check your formula"
+      139 +print("OK - spectral check passed")
+      140 +"""))
+      141 +
+      142 +CELLS.append(md("""\
+      143 +### Resolution — what can this ping *resolve*?
+      144 +
+      145 +Bandwidth set the data cost; the transducer **frequency** sets the *spatial* resolution.
+      146 +Axial resolution is about half the spatial pulse length:
+      147 +
+      148 +$$ \\text{axial\\_res} = n_\\text{cycles}\\cdot\\frac{\\lambda}{2}, \\qquad \\lambda = \\frac{c}{f_\\text{Tx}}, \\qquad c = 1540\\ \\text{m/s} $$
+      149 +
+      150 +Higher $f_\\text{Tx}$ → shorter $\\lambda$ → finer detail — but (Act 2) more data.
+      151 +
+      152 +| $f_\\text{Tx}$ | $\\lambda$ | axial res (5 cyc) | resolves about |
+      153 +|---|---|---|---|
+      154 +| 1 MHz  | 1.54 mm  | 3.9 mm  | a grape |
+      155 +| 5 MHz  | 0.31 mm  | 0.77 mm | a sesame seed |
+      156 +| 10 MHz | 0.154 mm | 0.38 mm | a human hair (~0.07 mm) |
+      157 +| 15 MHz | 0.103 mm | 0.26 mm | a dust mite |
+      158 +
+      159 +*(GHz acoustic microscopy reaches a single cell ~10 µm — off our chart.)*
+      160 +"""))
+      161 +
+      162 +CELLS.append(code("""\
+      163 +# The resolution ladder, straight from the Transducer twin in modulus.py
+      164 +from modulus import Transducer
+      165 +print("f_Tx [MHz]   axial res [mm]")
+      166 +for f in (1e6, 5e6, 10e6, 15e6):
+      167 +    print(f"   {f/1e6:>5.0f}        {Transducer().axial_res(f)*1e3:.2f}")
+      168 +"""))
+      169 +
+      170  nb.cells = CELLS
+      171  out = REPO_ROOT / NB_NAME
+      172  nbf.write(nb, str(out))
+
+● Bash(py -3.12 dev_material/build_notebook.py && py -3.12 -c "import nbformat; nb=nbformat.read('ceeus2026_modulus_power.ipynb',as_version=4); nbformat.validate(nb);…)
+  ⎿  wrote C:\Users\chule\code\lab\academia\teaching\2026_ceeus_workshop\ceeus2026_modulus_power.ipynb  (8 cells)
+     valid, 8 cells: ['markdown', 'code', 'markdown', 'code', 'code', 'code', 'markdown', 'code']
+
+● 8 cells, valid. Let me execute the whole notebook headless (with the TODO filled in) to prove Act 1 runs front-to-back in a real kernel — not just the logic in isolation.
+
+● Bash(py -3.12 -m pip install -q matplotlib ipykernel nbclient 2>&1 | tail -1
+      py -3.12 - <<'PY'…)
+  ⎿  Running in the background (↓ to manage)
+
+● The pip install pushed it to background. Let me check the result.
+
+  Read 1 file (ctrl+o to expand)
+
+● Background command "Execute notebook headless with TODO filled" completed (exit code 0)
+
+● Act 1 executes end-to-end in a real kernel (exit 0): bootstrap → synthetic-data banner → spectral self-check passed → resolution ladder. Here's the block for your review.
+
+  Act 1 · C2–C7 (verified running)
+
+  C2 (md) — the signal, "what is in here?": ping/echo, RF vs envelope = same info, different bandwidth = the lever.
+
+  C3 (code) — load one measurement, plot raw RF:
+  rf, env, fs = load_traces(DATA)          # real .npz or loud synthetic stand-in
+  t_us = np.arange(len(rf)) / fs * 1e6
+  plt.plot(t_us, rf, lw=0.8); plt.xlabel("time [µs]"); ...
+
+  C4 (code) — same echo, two representations (time + spectrum), reusing dasIT fftsignal:
+  f_rf, P_rf  = fftsignal(rf,  fs)         # dasIT Welch PSD, freq in MHz
+  f_env, P_env = fftsignal(env, fs)
+  # 2 panels: RF vs envelope in time | RF vs envelope spectrum
+
+  C5 (TODO a) — the spectral 4× check, with self-check assert:
+  raw_mean = ...   # f_mean = Σ fᵢ·Pᵢ / Σ Pᵢ   (paper eq. 2)
+  env_mean = ...
+  assert env_mean < raw_mean ; assert ratio > 2
+  # prints: RF ~2.9 MHz, envelope ~0.7 MHz, reduction ~4× (real data)
+
+  C6 (md) — resolution = f(f_Tx) + the scale ladder (grape → seed → hair → mite; cell off-chart).
+
+  C7 (code) — the ladder printed from the Transducer twin (bridges to Act 2's model):
+  f_Tx [MHz]   axial res [mm]
+      1            3.85
+     10            0.39   ...
+
+  Verification
+
+  ┌──────────────────────────────────────┬──────────────────────────────────┐
+  │                Check                 │              Result              │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Full notebook executes headless      │ ✓ exit 0                         │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Synthetic fallback fires with banner │ ✓                                │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Self-check passes (filled TODO)      │ ✓ (synth 31.7×; real data → ~4×) │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ dasIT fftsignal reuse works          │ ✓                                │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Resolution ladder from twin          │ ✓                                │
+  └──────────────────────────────────────┴──────────────────────────────────┘
+
+  Two notes:
+  - The synthetic envelope is very smooth → shows 31.7× (the banner explains it's a stand-in); your real ModulUS traces will read ~4×, matching the paper line printed beside it.
+  - The hair/seed/mite images (with citations) are still text-only — I'll source + cite those when we do the visual pass.
+
+  Sign off on Act 1 and I'll build Act 2 (C8–C11): Nyquist → data_rate → the two walls, the data_rate TODO, and the Stage-1 "you can't beat BLE by shrinking the battery" interactive — then we review.
+
+✻ Sautéed for 5m 56s
+
+❯ can i stop here and restart later. I need  to go. can you past the complete chat in  amrkdown file and can you keep a memeory of our discussion and what you need to do?
+
+● I'll save a session log and a resume-state memory so you can pick up exactly where we left off.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Create file
+ dev_material\session_log_2026-06-06.md
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+    1 # CEEUS 2026 Workshop — Session Log (2026-06-06)
+    2
+    3 Design + build session for the ModulUS power/battery Colab. Captures decisions,
+    4 artifacts, and the resume point. (Reconstructed transcript, not verbatim.)
+    5
+    6 ---
+    7
+    8 ## Context established
+    9 - Read `dev_material/ceeus2026_workshop_brief.md` (full) and the ModulUS IUS-2025
+   10   paper (PDF was password-protected → extracted text to
+   11   `dev_material/modulus_ius2025_extracted.txt`).
+   12 - Claude wears 4 expert hats for this work: wearable-US domain, pedagogy/syllabus,
+   13   research-code, software-engineer-for-teaching.
+   14 - Workshop: IEEE CEEUS 2026, Warsaw, 22–24 Jun 2026. ~20 min talk + live ModulUS
+   15   acquisition + ~30 min Colab. Owns the system–power–data axis.
+   16
+   17 ## Working style agreed
+   18 - Go slow, step by step: **zoom-out concept → review together → zoom-in → review**.
+   19   Not big-bang builds. User is architect; surface trade-offs, let user decide.
+   20 - Use tables + ASCII to structure ideas.
+   21 - Cite or discuss provenance for every "acknowledged value".
+   22
+   23 ## Narrative locked — 3-act arc (inductive, grounded in the real signal)
+   24 ```
+   25 ACT 1 SIGNAL            ACT 2 COST              ACT 3 SYSTEM
+   26 "what's in here?"   →  "what's it cost      →  "can this be
+   27                         to capture & move?"      a wearable?"
+   28 resolution/freq         Nyquist→data→walls       power→battery→INVERT
+   29 SEE it                  PAY for it               LIVE with it
+   30 ```
+   31 Spine: `resolution → frequency → Nyquist → data rate → power → battery → wearability`.
+   32 - Plant the envelope in Act 1, cash it in Act 3.
+   33 - Act 3 ends by INVERTING the chain (given wrist budget → what survives) = the
+   34   gradeable terminal exercise.
+   35 - Designed "oh": single-channel raw RF (realistic PRF/nRx) breaks the ~1 Mb/s BLE
+   36   wall → "this architecture cannot exist", not "use a bigger battery".
+   37
+   38 ## Model decisions locked
+   39 - **Option B**: `f_Tx` is the ONE primary knob; `fs` and resolution are DERIVED
+   40   (one connected story). Rejected fs-as-primary (breaks the spine).
+   41 - `K_NYQUIST=2` (fs_RF = 2·f_Tx → 10 MHz = 20 Msps). `BWR_FACTOR=4`
+   42   (fs_BWR = 5 Msps, lands on STM32L496 on-chip ADC). 20→5 = 4× ties to paper.
+   43 - **Two walls, three tiers**: ADC wall (5 Msps) splits RF (external ADC/FPGA) from
+   44   BWR/features (MCU class) = Table I's FPGA-vs-MCU divide. BLE wall (~1 Mb/s) splits
+   45   features (survives) from BWR (floods radio at nRx≈8). RF breaks both.
+   46 - **3 primary sliders**: f_Tx (axial res), PRF (temporal res), nRx (lateral). bits, D secondary.
+   47 - **In-sandbox power = generic ~20 mW static** (NOT the PuLsE paper number):
+   48   Ping 1 + Echo 4 + Core 15 mW; +2 mW features. Lesson: device idles at floor,
+   49   radio explodes toward real imaging.
+   50 - **mW/MHz**: notebook outputs total power (drives battery) AND the paper's FoM
+   51   (power/Rx-ch/f_Tx) as a secondary line.
+   52 - Rename `R_dot → data_rate`. Synthetic demo RF set to ~2 MHz placeholder.
+   53
+   54 ## Hardware digital-twin = software architecture
+   55 ModulUS = 4 modules. Twin classes in `modulus.py`:
+   56 - **Motherboard** ≡ `System` (interconnect / composition root).
+   57 - **Ping** = pulser board (STHVUP32 + T/R switch) — send the pulse. 8 ch exposed.
+   58 - **Echo** = AFE board (envelope detector) — catch/condition the echo.
+   59 - **Core** = control board (STM32L496 + dual 5 Msps ADC) — acquire + compute.
+   60 - External (NOT ModulUS): `Transducer` (front), `Radio`/BLE (downstream), `Battery`.
+   61 Board naming = Scheme A (the pulse-echo physics): **Ping / Echo / Core** on the
+   60 - External (NOT ModulUS): `Transducer` (front), `Radio`/BLE (downstream), `Battery`.
+   61 Board naming = Scheme A (the pulse-echo physics): **Ping / Echo / Core** on the
+   60 - External (NOT ModulUS): `Transducer` (front), `Radio`/BLE (downstream), `Battery`.
+   61 Board naming = Scheme A (the pulse-echo physics): **Ping / Echo / Core** on the
+
+● Act 1 executes end-to-end in a real kernel (exit 0): bootstrap → synthetic-data banner → spectral self-check passed → resolution ladder. Here's the block for your review.
+
+  Act 1 · C2–C7 (verified running)
+
+  C2 (md) — the signal, "what is in here?": ping/echo, RF vs envelope = same info, different bandwidth = the lever.
+
+  C3 (code) — load one measurement, plot raw RF:
+  rf, env, fs = load_traces(DATA)          # real .npz or loud synthetic stand-in
+  t_us = np.arange(len(rf)) / fs * 1e6
+  plt.plot(t_us, rf, lw=0.8); plt.xlabel("time [µs]"); ...
+
+  C4 (code) — same echo, two representations (time + spectrum), reusing dasIT fftsignal:
+  f_rf, P_rf  = fftsignal(rf,  fs)         # dasIT Welch PSD, freq in MHz
+  f_env, P_env = fftsignal(env, fs)
+  # 2 panels: RF vs envelope in time | RF vs envelope spectrum
+
+  C5 (TODO a) — the spectral 4× check, with self-check assert:
+  raw_mean = ...   # f_mean = Σ fᵢ·Pᵢ / Σ Pᵢ   (paper eq. 2)
+  env_mean = ...
+  assert env_mean < raw_mean ; assert ratio > 2
+  # prints: RF ~2.9 MHz, envelope ~0.7 MHz, reduction ~4× (real data)
+
+  C6 (md) — resolution = f(f_Tx) + the scale ladder (grape → seed → hair → mite; cell off-chart).
+
+  C7 (code) — the ladder printed from the Transducer twin (bridges to Act 2's model):
+  f_Tx [MHz]   axial res [mm]
+      1            3.85
+     10            0.39   ...
+
+  Verification
+
+  ┌──────────────────────────────────────┬──────────────────────────────────┐
+  │                Check                 │              Result              │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Full notebook executes headless      │ ✓ exit 0                         │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Synthetic fallback fires with banner │ ✓                                │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Self-check passes (filled TODO)      │ ✓ (synth 31.7×; real data → ~4×) │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ dasIT fftsignal reuse works          │ ✓                                │
+  ├──────────────────────────────────────┼──────────────────────────────────┤
+  │ Resolution ladder from twin          │ ✓                                │
+  └──────────────────────────────────────┴──────────────────────────────────┘
+
+  Two notes:
+  - The synthetic envelope is very smooth → shows 31.7× (the banner explains it's a stand-in); your real ModulUS traces will read ~4×, matching the paper line printed beside it.
+  - The hair/seed/mite images (with citations) are still text-only — I'll source + cite those when we do the visual pass.
+
+  Sign off on Act 1 and I'll build Act 2 (C8–C11): Nyquist → data_rate → the two walls, the data_rate TODO, and the Stage-1 "you can't beat BLE by shrinking the battery" interactive — then we review.
+
+✻ Sautéed for 5m 56s
+
+❯ can i stop here and restart later. I need  to go. can you past the complete chat in  amrkdown file and can you keep a memeory of our discussion and what you need to do?
+
+● I'll save a session log and a resume-state memory so you can pick up exactly where we left off.
+
+● Write(dev_material\session_log_2026-06-06.md)
+  ⎿  Wrote 123 lines to dev_material\session_log_2026-06-06.md
+       1 # CEEUS 2026 Workshop — Session Log (2026-06-06)
+       2
+       3 Design + build session for the ModulUS power/battery Colab. Captures decisions,
+       4 artifacts, and the resume point. (Reconstructed transcript, not verbatim.)
+       5
+       6 ---
+       7
+       8 ## Context established
+       9 - Read `dev_material/ceeus2026_workshop_brief.md` (full) and the ModulUS IUS-2025
+      10   paper (PDF was password-protected → extracted text to
+     … +113 lines (ctrl+o to expand)
+
+  Wrote 2 memories (ctrl+o to expand)
+
+● Saved. You can safely stop and resume anytime.

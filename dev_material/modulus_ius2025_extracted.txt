@@ -1,0 +1,427 @@
+===== PAGE 1 =====
+ModulUS: A Sandbox for High-Resolution
+Wearable Ultrasound Development
+Christoph Leitner ∗, Marco Giordano ∗, Martin Tanner ∗, Federico Villani ∗, Michele Magno ∗,
+Luca Benini ∗†,
+∗Department of Information Technology and Electrical Engineering, ETH Zurich, Switzerland
+†DEI, University of Bologna, Bologna, Italy
+Abstract—We introduce ModulUS, a modular sandbox plat-
+form for wearable ultrasound (US) development. The four-
+board system integrates a 32-channel pulser, an analog frontend
+(AFE) with bandwidth reduction, and an ARM Cortex-M4
+microcontroller (MCU) with a dual 5 Msps, 12 bitanalog-digital
+converter (ADC), each implemented as a swappable module to
+support rapid prototyping and evaluation of alternative circuit
+architectures. To demonstrate its functionality, we validated the
+AFE board, which reduces the effective signal bandwidth by
+a factor of 4 while preserving structural features, with envelope
+fidelity confirmed against digital Hilbert transforms (R 2 = 0.88).
+Compared to State-of-the-Art (SoA) platforms, ModulUS-derived
+designs set a new benchmark in power efficiency, achieving
+the lowest reported average power normalized by excitation
+frequency (0.6 mW/MHz), down to two orders of magnitude
+below existing MCU- and Field Programmable Gate Arrays
+(FPGA)-based systems. By shifting bandwidth reduction (BWR)
+into the analog domain, ModulUS enables high-frequency, low-
+power US acquisition and establishes a flexible, reconfigurable
+testbed for next-generation wearable US technologies.
+Index Terms—Wearable Ultrasound, Modular Design, Band-
+width Reduction, Analog Front-End, Low-Power Ultrasound,
+Microcontroller-Based, High-Frequency Ultrasound
+I. I NTRODUCTION
+A growing trend in wearable US system design is the shift
+from conventional medical imaging towards the acquisition,
+processing, and machine interpretation of raw US data directly
+on digital probes [1]. Emerging non-imaging US wearables are
+typically optimized for recording A-mode or M-mode echoes,
+often via distributed transducer networks [2], and leverage ma-
+chine learning (ML) for data interpretation, thereby reducing
+the traditionally high operator dependence of US.
+From a system architecture perspective, two main templates
+(see Tab. I) dominate the field: (a) medium-channel-count
+wearable platforms with up to 32 channels implemented on
+FPGA-based architectures, and (b) low-channel-count plat-
+forms (1–8 channels, often partially time-multiplexed) employ-
+ing MCU-based topologies. The primary differences between
+these architectures lie in their achievable axial spatial reso-
+lutions (i.e., the maximum transducer excitation frequencies),
+temporal resolutions (i.e., the maximum pulse-repetition fre-
+quencies), number of parallel receive (Rx) channels, and trade-
+offs in power consumption and form factor (i.e., volume).
+FPGA-based wearables [5] are, in principle, fully capable
+US systems that can support standard medical modalities such
+as A- and M-mode scans, B-mode imaging, and Doppler,
+Christoph Leitner and Marco Giordano contributed equally to this work.
+Corresponding author: christoph.leitner@iis.ee.ethz.ch
+Wearable US Topology n Rx Volume Power / n Rx Power / fTxnRx
+Systems [cm3] [mW] [mW/MHz]
+WULPUS [3] MCU 1 ∗14.95 ∗22 5.5
+USoP [4] MCU 1 ∗16.2 614 102.3
+TinyProbe [5] FPGA 32 39.9 30.3 2.0
+†PuLsE [6] MCU 1 ‡12.6 5.8 ↓ 0.6
+nRx denotes the number of Rx channels, and fTx denotes the excitation
+frequency of the transducer. Reported power metrics were extracted
+from the cited literature and, where specified, correspond to pulse
+repetition frequencies of at least 25 Hz.
+∗ System size and power values were reported in [5].
+† This system was developed on ModulUS.
+‡ The referenced paper only stated that the system can be integrated
+into a smartwatch; for completeness we assumed a diameter of 40 mm
+and a thickness of 10 mm, corresponding to commercial smartwatch
+form factors [7].
+↓ Indicates the best (lowest) value among the compared systems.
+TABLE I
+COMPARISON OF WEARABLE US SYSTEMS , INCLUDING PROCESSING
+TOPOLOGY , NUMBER OF RX CHANNELS , DEVICE VOLUME , AND
+POWER CONSUMPTION . REPORTED POWER IS ADDITIONALLY
+NORMALIZED PER RX CHANNEL AND TO THE EXCITATION
+FREQUENCY (FTX) OF THE TRANSDUCER .
+but at the cost of higher power consumption and larger
+form factor compared with MCU-based wearables [6] (see
+Tab. I). Conversely, MCU-based platforms are substantially
+smaller and more power-efficient, but significantly constrained
+in spatial and temporal resolution [3].
+For many MCU-based US wearables without imaging ca-
+pabilities, hardware constraints make it impractical or even
+impossible to capture modalities in which phase information
+is critical (e.g., beamforming, fast displacement tracking,
+or Doppler) [8]. Even when radio frequency (RF) data are
+recorded and digitized, phase information is often discarded
+during subsequent digital signal processing [9], [10]. Sup-
+porting phase information typically requires full-bandwidth
+ADC, which imposes substantial computational overhead, of-
+ten exceeding 5× that of bandwidth reduced methods [11]. To
+address this limitation, analog signal-conditioning approaches
+for wearable US have been proposed [12], which reduce the
+effective bandwidth of the received signals before digitization
+while preserving echo resolution that is set by the transmit
+signal bandwidth. By easing the digitization burden, these
+methods can expand the capabilities of MCU-based wearable
+US systems, relaxing existing hardware requirements and
+enabling higher-frequency, higher-resolution applications.
+Despite these recent advances, developing a wearable US
+system remains challenging, requiring deep mixed-signal ex-
+pertise and cross-disciplinary domain knowledge. Most open
+2025 IEEE International Ultrasonics Symposium (IUS) | 979-8-3315-2332-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/IUS62464.2025.11201551
+Authorized licensed use limited to: ETH BIBLIOTHEK ZURICH. Downloaded on June 05,2026 at 14:12:45 UTC from IEEE Xplore.  Restrictions apply. 
+===== PAGE 2 =====
+NRF53
+BLE
+USB-C
+STM32L496
+ARM 
+Cortex-M4
+ADC 
+5Msps
+@12bitBandwidth Reduction
+Circuit
+Bandwidth Reduction
+Circuit
+Bandwidth 
+Reduction Circuit
+QSPI
+TxRx
+SMA
+STHVUP32
+Pulser
+TR
+Switch
+RF signals BWR signals
+TxRx Board AFE Board Control & Compute Board
+ModulUS
+Motherboard
+analog signals (Tx/Rx)
+digital signals
+Fig. 1. High-level circuit block diagram of the ModulUS platform. The system integrates a control and compute board (MCU, ADC, memory, and
+communication interfaces), an analog front-end board for signal conditioning and bandwidth reduction, and a Tx/Rx board with pulser, switching, and
+transducer interfacing.
+TxRx Board AFE Board Control & 
+Compute Board
+Motherboard
+Transducer
+Fig. 2. Photograph of the assembled ModulUS platform showing the moth-
+erboard with its functional boards.
+research systems use FPGA-based designs [13], which are
+complex to develop and adapt, whereas open-source MCU-
+based architectures are well documented and straightforward
+to use [14] but lack the flexibility to modify modules such
+as the AFE, for evaluating new BWR techniques due to their
+high level of integration.
+In this context, we present ModulUS, a modular and flexible
+hardware sandbox for wearable US development. The primary
+contribution of this work is a detailed description of the
+platform’s design concept and a demonstration of its func-
+tionality, showing how it employs an AFE processing board
+to preserve high axial resolution with a 10 MHz transducer
+while reducing conversion, sequencing, and digital computing
+requirements. This design enables data acquisition without
+complex high-speed interconnects to ADCs (e.g., LVDS or
+JESD204), instead leveraging an ARM Cortex-M4 MCU with
+advanced analog features and an integrated 5 Msps ADC.
+II. S YSTEM DESIGN
+A. Architecture
+The ModulUS system architecture (Fig. 1) is designed for
+modularity, allowing flexible modification of the core building
+blocks of a wearable US platform. These include the Tx and
+Rx stages, the AFE, and the control and compute unit. The
+complete system (Fig. 2) consists of four functional boards
+and measures 260 x 115 x 40 mm:
+1) The TxRx board integrates a 32-channel US pulser
+(STHVUP32, STMicroelectronics, Switzerland), with 8
+exposed channels in Tx and Rx,
+2) The AFE board integrates the BWR circuits for all chan-
+nels, as described in [11], enabling envelope detection,
+3) The control and compute board is based on an
+STM32L496 MCU (STMicroelectronics, Switzerland),
+featuring a dual 5 Msps, 12 bit on-chip ADC. It provides
+a USB-C interface for data transfer either via Universal
+Asynchronous Receiver/Transmitter (UART) or through
+an NRF53 Bluetooth low energy (BLE)-capable MCU
+to a connected subsystem,
+4) The ModulUS motherboard interconnects all daughter
+modules using high-density board-to-board connectors.
+B. Functionality
+The pulser is configured by the MCU via a Quad Serial
+Peripheral Interface (QSPI) interface, which programs its se-
+quencing logic. After boot, the MCU initializes the pulser and
+starts pulse generation, transmitting signals to the transducer.
+The returning echoes pass through the transmit-receive switch
+(TR) to the AFE board, where envelope detection is applied.
+For each received US pulse, an interrupt triggers an ADC
+capture on the MCU. The acquired data is then processed,
+stored locally, or transmitted to the host system. Power is
+supplied to each board via dedicated edge connectors, ensuring
+electrical isolation between subsystems and enabling flexible
+reconfiguration for experimental setups.
+Authorized licensed use limited to: ETH BIBLIOTHEK ZURICH. Downloaded on June 05,2026 at 14:12:45 UTC from IEEE Xplore.  Restrictions apply. 
+===== PAGE 3 =====
+C. Figure of Merit Comparison
+To compare wearable US systems with different transducer
+center frequencies ( f TX), we define the average power per
+Rx channel normalized by f TX (mW/MHz) as a figure of
+merit. Since higher frequencies improve axial resolution but
+proportionally increase the energy required for signal conver-
+sion, storage, computation, and transfer [15], normalization
+provides a resolution-aware basis for comparing MCU- and
+FPGA-based architectures with the results presented in Table
+I and discussed in Section IV.
+III. E XPERIMENTAL TESTING
+A. Setup
+The system was validated using a single-channel 10 MHz
+transducer (Piezohannas, China) immersed in water. The trans-
+ducer emitted five-cycle pulses ( n = 5) at 15 Vpp toward a
+0.7 mm polyethylene terephthalate (PET) disc, which served
+as a reflecting interface. Both raw Rx echoes and processed
+analog envelopes, generated by the AFE module, were ac-
+quired simultaneously on an acquisition card (ADQ412, Tele-
+dyn Technologies, USA).
+Axial resolution was approximated as half the spatial pulse
+length (SPL) [16], with SPL = nλ. Using a sound speed of
+c = 1540 m s−1 and a center frequency of f = 10 MHz, the
+wavelength is λ = c/f = 0 .154 mm. This yields SPL =
+0.77 mm for n = 5 cycles and an axial resolution of about
+0.38 mm, sufficient to resolve the two surfaces (upper and
+lower boundaries) of the 0.7 mm disc.
+The minimum frequency required to resolve a target of
+thickness d follows from the resolution criterion Rax ≤ d,
+which gives
+fmin = nc
+2d . (1)
+For n = 5, c = 1540 m s−1, and d = 0.7 mm, this evaluates
+to fmin ≈ 5.5 MHz, indicating that probes below this frequency
+cannot resolve the disc under comparable pulse conditions.
+B. Evaluation
+Two metrics were used to assess the performance of the
+ModulUS AFE. First, Welch power spectral densities were
+computed for the raw Rx signals and the corresponding BWR
+envelopes. The mean spectral frequency was calculated as
+fmean =
+P
+i fi P (fi)P
+i P (fi) , (2)
+where fi denotes the frequency bins and P (fi) the spectral
+power at each frequency. The ratio of mean frequencies
+quantified the effective bandwidth reduction. Second, the
+fidelity of the analog envelopes was compared to digitally
+derived envelopes obtained via the Hilbert transform. Prior
+to comparison, signals were corrected for DC bias and filter
+delay. The coefficient of determination was computed as
+R2 = 1 −
+P
+i(yi−ˆyi)2
+P
+i(yi−¯y)2 , (3)
+where yi are the analog envelope samples, ˆyi the corre-
+sponding Hilbert-derived samples, and ¯y their mean.
+Echo upper 
+disk boundary
+Echo lower 
+disk boundary
+Fig. 3. Validation results using a 10 MHz transducer and a 0.7 mm PET
+disc. The raw receive (Rx) signal (blue), the analog envelope obtained from the
+analog front-end
+ 
+A2 [ |A1x(t)|∗hLPF(t) ]
+
+(green), and the digitally derived
+Hilbert envelope
+ 
+|H(x(t))|
+
+(brown) are shown. Here, A1 denotes the
+prerectification gain applied to the RF signal, hLPF(t) is the impulse response
+of the low-pass filter used to extract the envelope (which introduces a group
+delay relative to the Hilbert method), and A2 represents post-filter gain. The
+analog and digital envelopes exhibit close correspondence ( R2 = 0.88), and
+the PET disc generates two resolvable echo peaks despite an approximately
+fourfold bandwidth reduction.
+C. Results
+The mean frequency of the raw Rx signals was approxi-
+mately 2.9 MHz, while the BWR envelopes exhibited a mean
+frequency of 0.7 MHz, corresponding to a reduction by a
+factor of about four. The PET disc produced two resolv-
+able echo peaks in the BWR envelopes, demonstrating that
+essential structural information was preserved despite the
+reduced bandwidth. Moreover, analog and digitally derived
+envelopes showed close correspondence with R2 = 0 .88,
+with differences limited to the expected phase removal. The
+approximately fourfold bandwidth reduction enabled direct
+digitization using the on-chip ADC of the MCU, eliminat-
+ing the need for high-speed FPGA-based acquisition. Fig. 3
+illustrates representative results, showing the raw Rx signal,
+the analog envelope obtained from the AFE, and the digitally
+derived envelope for direct comparison.
+IV. D ISCUSSION
+The results confirm that ModulUS achieves sub-millimeter
+axial resolution while operating entirely on a low-power MCU.
+This capability is enabled by the analog BWR frontend,
+which compresses the effective signal spectrum by a factor of
+four without erasing structural information. When positioned
+against the SoA (Tab. I), platforms based on the ModulUS
+concept (e.g., PuLsE [6]) show a distinct trade-off profile.
+FPGA-based systems such as TinyProbe [5] offer superior
+flexibility, with up to 32 channels and native support for
+Authorized licensed use limited to: ETH BIBLIOTHEK ZURICH. Downloaded on June 05,2026 at 14:12:45 UTC from IEEE Xplore.  Restrictions apply. 
+===== PAGE 4 =====
+imaging and advanced US modalities (e.g., Doppler). How-
+ever, supporting multiple channels with high spatio-temporal
+resolutions comes at the cost of increased power consump-
+tion ( 970 mW) and a substantially larger volume ( 39.9 cm3)
+compared to MCU-based single channel systems. In contrast,
+MCU-based solutions such as WULPUS [3], USoP [4], and
+PuLsE [6] achieve much lower power and volume but remain
+fundamentally limited to single-channel operation.
+To enable a fair comparison across architectures operating
+at different transducer frequencies, we introduced the normal-
+ized average power per Rx channel ( mW/MHz) as a figure
+of merit (see Section II-C). Using this metric, ModulUS-
+derived systems such as PuLsE [6] set a new benchmark
+with 0.6 mW/MHz, outperforming all previously reported
+wearable designs (Tab. I). For reference, USoP consumes
+102.3 mW/MHz, TinyProbe 2.0 mW/MHz, and WULPUS
+5.5 mW/MHz. This efficiency gain, exceeding two orders of
+magnitude compared to USoP, and remaining 3–10x lower
+than TinyProbe and WULPUS, demonstrates that envelope-
+domain acquisition with analog BWR can decouple high-
+resolution imaging from excessive energy budgets.
+These results have important implications. First, Modu-
+lUS demonstrates that MCU-based platforms are not strictly
+limited to low-frequency or low-resolution applications. By
+pushing BWR into the analog domain, ModulUS enables
+operation of 10 MHz transducers with power figures that sur-
+pass other ultra-low-power MCU solutions working at much
+lower frequencies. Second, the modular design of ModulUS
+opens up a level of reconfigurability for the development of
+individual wearable system designs. Unlike highly integrated
+devices, ModulUS exposes the AFE, pulser, and control logic
+as interchangeable components, lowering the barrier for future
+research in alternative BWR schemes or wearable transducer
+development.
+Naturally, these gains come with limitations. ModulUS
+processes only one channel at a time; this rules out simultane-
+ous multi-channel imaging. Furthermore, the envelope-domain
+path discards phase information, meaning it cannot directly
+support applications such as Doppler or displacement tracking.
+Finally, ModulUS is not a wearable US system per se but
+a catalyst. Its modularity and flexibility come at the cost of
+size and weight, positioning it as a sandbox for wearable US
+development rather than a deployable device.
+V. C ONCLUSION
+We introduced ModulUS, a four-board sandbox for de-
+veloping high-resolution wearable US systems. By shifting
+BWR into the analog domain, ModulUS moves the per-
+formance bottleneck away from digital acquisition, enabling
+sub-millimeter resolution on low-power MCU platforms. The
+system preserves structural information at 10 MHz while re-
+ducing bandwidth more than fourfold. Its modular design,
+exposing pulser, AFE, as well as control and compute units
+as interchangeable modules, provides a versatile platform for
+wearable US research. These gains entail trade-offs. Com-
+pared to higher-power FPGA-based systems, ModulUS is
+limited to single-channel operation, restricting simultaneous
+2-D imaging. Furthermore, its envelope-based BWR omits
+phase information, required by many modalities such as delay-
+and-sum beamforming, Doppler, or displacement tracking.
+Addressing this would involve phase-preserving strategies
+(e.g., I/Q sampling or alternative BWR methods), at the cost
+of higher power and system complexity. Future work will
+focus on refining ModulUS through standardized module form
+factors, comprehensive in vivo validation, and open-sourcing
+the hardware design.
+ACKNOWLEDGMENT
+This work was supported by the Swiss National Science
+Foundation (SNSF) under Ambizione Grant 233457. The au-
+thors like to thank A. Blanco (Microelectronics Design Center,
+ETH Z ¨urich) as well as H. Gisler and T. Quanbrough (Inte-
+grated Systems Laboratory, ETH Z ¨urich) for their technical
+support.
+REFERENCES
+[1] S. V ostrikov et al. , “Unsupervised feature extraction from raw data
+for gesture recognition with wearable ultralow-power ultrasound,” IEEE
+Trans. Ultrason. Ferroelectr . Freq. Control, vol. 71, no. 7, pp. 831–841,
+2024.
+[2] B. G. Sgambato et al. , “Towards natural multi-dof prosthetic control
+with distributed ultrasound,” in IEEE Ultrasonics, Ferroelectrics, and
+Frequency Control Joint Symposium , 2024, pp. 1–6.
+[3] S. Frey et al. , “Wulpus: a wearable ultra low-power ultrasound probe
+for multi-day monitoring of carotid artery and muscle activity,” in IEEE
+International Ultrasonics Symposium , 2022, pp. 1–4.
+[4] M. Lin et al., “A fully integrated wearable ultrasound system to monitor
+deep tissues in moving subjects,” Nat. Biotechnol. , vol. 42, no. 3, pp.
+448–457, Mar. 2024.
+[5] S. V ostrikov et al. , “Tinyprobe: A wearable 32-channel multimodal
+wireless ultrasound probe,” IEEE Trans. Ultrason. Ferroelectr . Freq.
+Control, vol. 72, no. 1, pp. 64–76, 2025.
+[6] M. Giordano et al. , “Pulse: Accurate and robust ultrasound-based
+continuous heart-rate monitoring on a wrist-worn iot device,” IEEE
+Internet Things J. , pp. 1–1, 2025.
+[7] Samsung Electronics, “Galaxy watch7 smartwatch,” https://www.
+samsung.com/us/watches/galaxy-watch7/, 2025, accessed: 2025-08-29.
+[8] M. Tanter and M. Fink, “Ultrafast imaging in biomedical ultrasound,”
+IEEE Trans. Ultrason. Ferroelectr . Freq. Control , vol. 61, no. 1, pp.
+102–119, 2014.
+[9] B. G. Sgambato et al. , “High performance wearable ultrasound as a
+human-machine interface for wrist and hand kinematic tracking,” IEEE
+Trans. Biomed. Eng. , vol. 71, no. 2, pp. 484–493, 2024.
+[10] L. Jonveaux et al. , “Review of Current Simple Ultrasound Hard-
+ware Considerations, Designs, and Processing Opportunities,” J. Open
+Hardw., vol. 6, no. 1, p. 3, Feb. 2022.
+[11] M. Giordano et al. , “Towards a novel ultrasound system based on low-
+frequency feature extraction from a fully-printed flexible transducer,” in
+IEEE Biomedical Circuits and Systems Conference , 2023, pp. 1–5.
+[12] A. Bashatah et al., “Wearable ultrasound system using low-voltage time
+delay spectrometry for dynamic tissue imaging,” IEEE Trans. Biomed.
+Eng., vol. 71, no. 11, pp. 3232–3243, 2024.
+[13] E. Boni et al. , “Ultrasound Open Platforms for Next-Generation Imag-
+ing Technique Development,” IEEE Trans. Ultrason. Ferroelectr . Freq.
+Control, vol. 65, no. 7, pp. 1078–1092, Jul. 2018.
+[14] S. V ostrikov et al. , “WULPUS: Wearable ultra low-power ultrasound
+probe (github repository),” https://github.com/pulp-bio/wulpus, 2022,
+accessed: 2025-08-30.
+[15] ——, “Towards an open, flexible, wearable ultrasound probe for mus-
+culoskeletal monitoring,” in IEEE International Ultrasonics Symposium ,
+2021, pp. 1–4.
+[16] W. D. O’Brien, “Ultrasound–biophysics mechanisms,” Prog. Biophys.
+Mol. Biol. , vol. 93, no. 1, pp. 212–255, 2007, effects of ultrasound and
+infrasound relevant to human health.
+Authorized licensed use limited to: ETH BIBLIOTHEK ZURICH. Downloaded on June 05,2026 at 14:12:45 UTC from IEEE Xplore.  Restrictions apply. 
