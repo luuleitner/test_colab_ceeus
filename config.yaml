@@ -1,16 +1,16 @@
 # ════════════════════════════════════════════════════════════════════════
 #  ModulUS system definition — the digital-twin spec.
 #
-#  Each section below holds ONE board's parameters. Which board class fills each
-#  slot is chosen in modulus.py (System); here you set the numbers.
+#  Each section below holds ONE board's parameters. Which board class is used is
+#  chosen in modulus.py (System); here you set the numbers.
 #
 #               ┌──────────────┐
 #               │  Transducer  │  external front · f_Tx is the runtime knob
 #               └──────┬───────┘
-#                 RF / echo                                       slot
+#                 RF / echo                                       section
 #    ┌─────────────────┼──────────── ModulUS sandbox ──────────┐
 #    │          ┌──────┴───────┐                                │
-#    │          │    Pulse     │  pulser STHVUP32 + T/R         │   pulse
+#    │          │    Pulse     │  HV pulser + T/R switch        │   pulse
 #    │          └──────┬───────┘                                │
 #    │          ┌──────┴───────┐                                │
 #    │          │    Echo      │  analog front-end (AFE)        │   echo
@@ -28,7 +28,11 @@
 #  Each param carries:
 #    value / ref / status   —   status ∈
 #       verified          value backed by a citation (ref points to it)
-#       model-assumption  a number we chose; no citation (ref states the basis)
+#       model-assumption  a number we chose; ref gives the basis (no exact cite)
+#  Refs are IEEE-style with a DOI/URL.  ModulUS paper =
+#    C. Leitner et al., "ModulUS: A Sandbox for High-Resolution Wearable
+#    Ultrasound Development," IEEE Int. Ultrason. Symp. (IUS), 2025,
+#    https://doi.org/10.1109/IUS62464.2025.11201551
 # ════════════════════════════════════════════════════════════════════════
 
 
@@ -37,15 +41,15 @@
 physics:
   speed_of_sound_ms:
     value: 1540
-    ref: "Standard soft-tissue value in pulse-echo ultrasound; AIUM; used in ModulUS IUS-2025 (cf. O'Brien, Prog. Biophys. Mol. Biol. 2007)."
+    ref: "1540 m/s soft-tissue standard. W. D. O'Brien, 'Ultrasound-biophysics mechanisms,' Prog. Biophys. Mol. Biol., vol. 93, no. 1, pp. 212-255, 2007, https://doi.org/10.1016/j.pbiomolbio.2006.07.010"
     status: verified
   pulse_cycles:
     value: 5
-    ref: "Design choice; ModulUS IUS-2025 experimental setup used 5-cycle excitation."
+    ref: "5-cycle excitation per the ModulUS experimental setup. C. Leitner et al., IEEE IUS, 2025, https://doi.org/10.1109/IUS62464.2025.11201551"
     status: verified
 
 
-# ── Pulse board: pulser (STHVUP32) + T/R switch — send the pulse ──────────
+# ── Pulse board: HV pulser + T/R switch — send the pulse ──────────────────
 #      ┌────────┐  HV pulse
 #      │ pulser │──┬──►  transducer        (T/R routes Tx out / Rx in)
 #      │  + T/R │◄─┘   echo
@@ -54,11 +58,15 @@ pulse:
   params:
     channels_exposed:
       value: 8
-      ref: "ModulUS IUS-2025: STHVUP32 pulser, 8 of 32 channels exposed."
+      ref: "Multi-channel HV pulser, 8 of 32 channels exposed. C. Leitner et al., IEEE IUS, 2025, https://doi.org/10.1109/IUS62464.2025.11201551"
       status: verified
-    power_w:
-      value: 0.001
-      ref: "Generic low-duty Tx, part of the ~20 mW static budget. NOT a literature value."
+    power_per_channel_w:
+      value: 0.1e-3
+      ref: "Model assumption — generic low-power HV pulser, per active channel (<5 mW/ch). Order: a 32-channel pulser's low-power dissipation (~0.6-2.6 mW whole-chip) amortized per channel. No part-specific datasheet cited."
+      status: model-assumption
+    transducer_capacitance_f:
+      value: 1.0e-9
+      ref: "Representative single-element PZT C0, geometry-dependent (literature ~22 pF to ~2.3 nF). C0 = eps0*epsT*A/t with PZT-5A clamped permittivity ~830-1470. Basis: D. Berlincourt et al., 'Properties of Piezoelectric Ceramics,' Morgan Electro Ceramics, Tech. Publ. TP-226 (hosted at ultrasonic-resonators.org/misc/references/articles/)."
       status: model-assumption
 
 
@@ -70,15 +78,15 @@ echo:
   params:
     bandwidth_reduction:
       value: 4
-      ref: "ModulUS IUS-2025: raw mean 2.9 MHz -> envelope 0.7 MHz (~4x); 20 -> 5 Msps."
+      ref: "~4x bandwidth reduction (raw 2.9 MHz -> envelope 0.7 MHz). C. Leitner et al., IEEE IUS, 2025, https://doi.org/10.1109/IUS62464.2025.11201551"
       status: verified
     power_bias_w:
       value: 0.004
-      ref: "Generic always-on AFE bias, part of the ~20 mW budget. NOT a literature value."
+      ref: "Model assumption — generic always-on AFE bias within the ~20 mW budget; no literature source."
       status: model-assumption
     power_active_w:
       value: 0.003
-      ref: "Generic duty-scaled AFE active draw, part of the ~20 mW budget. NOT a literature value."
+      ref: "Model assumption — generic duty-scaled AFE draw within the ~20 mW budget; no literature source."
       status: model-assumption
 
 
@@ -90,27 +98,27 @@ core:
   params:
     adc_nyquist_factor:
       value: 2
-      ref: "Nyquist-Shannon sampling theorem (fs >= 2x signal bandwidth)."
+      ref: "Sampling theorem, fs >= 2x bandwidth. C. E. Shannon, 'Communication in the presence of noise,' Proc. IRE, vol. 37, no. 1, pp. 10-21, 1949, https://doi.org/10.1109/JRPROC.1949.232969"
       status: verified
     adc_fs_max_hz:
       value: 5.0e+6
-      ref: "STM32L496xx datasheet (ST): on-chip 12-bit ADC up to 5 Msps."
+      ref: "On-chip 12-bit ADC up to 5 Msps. STMicroelectronics, 'STM32L496xx datasheet' (DS11585), https://www.st.com/resource/en/datasheet/stm32l496ae.pdf"
       status: verified
     adc_fom_j:
       value: 50.0e-15
-      ref: "Literature-informed assumption: Walden FoM = P/(2^ENOB*fs); 50 fJ/conv-step is representative MCU-class (efficient ADCs <10 fJ; cf. Walden, IEEE JSAC 1999; Murmann ADC Survey). P_adc is negligible at our duty cycles."
+      ref: "Model assumption — representative MCU-class Walden FoM (~50 fJ/conv-step; efficient ADCs <10 fJ; P_adc negligible at our duty). Basis: R. H. Walden, 'Analog-to-digital converter survey and analysis,' IEEE JSAC, vol. 17, no. 4, pp. 539-550, 1999, https://doi.org/10.1109/49.761034 ; B. Murmann, 'ADC Performance Survey,' https://github.com/bmurmann/ADC-survey"
       status: model-assumption
     power_idle_w:
       value: 0.015
-      ref: "Generic MCU + housekeeping floor (dominates the ~20 mW budget). NOT a literature value."
+      ref: "Model assumption — generic MCU + housekeeping floor (dominates the ~20 mW budget); no literature source."
       status: model-assumption
     power_feature_w:
       value: 0.002
-      ref: "Generic on-device feature-compute draw. NOT a literature value."
+      ref: "Model assumption — generic on-device feature-compute draw; no literature source."
       status: model-assumption
     feature_count:
       value: 16
-      ref: "Illustrative features-mode payload per A-line (design choice)."
+      ref: "Model assumption — illustrative features-mode payload per A-line (design choice)."
       status: model-assumption
 
 
@@ -120,11 +128,11 @@ radio:
   params:
     energy_per_bit_j:
       value: 20.0e-9
-      ref: "Literature-informed assumption (~10-50 nJ/bit, strongly payload/interval-dependent; cf. Siekkinen et al., IEEE WCNCW 2012). No single citable value."
+      ref: "Model assumption — order-of-magnitude BLE energy/bit (~10-50 nJ/bit, payload-dependent). Basis: M. Siekkinen et al., 'How low energy is Bluetooth Low Energy? Comparative measurements with ZigBee/802.15.4,' IEEE WCNCW, 2012, pp. 232-237, https://doi.org/10.1109/WCNCW.2012.6215496"
       status: model-assumption
     throughput_max_bps:
       value: 1.0e+6
-      ref: "Conservative usable BLE ceiling. BLE 5 LE-2M application throughput tops ~1.3-1.4 Mb/s; we use 1 Mb/s. Cf. Tosi et al., Sensors 2017 (BLE performance review)."
+      ref: "Usable BLE ceiling ~1 Mb/s (BLE 5 LE-2M app-layer tops ~1.3-1.4 Mb/s; 1 Mb/s conservative). J. Tosi et al., 'Performance Evaluation of Bluetooth Low Energy: A Systematic Review,' Sensors, vol. 17, no. 12, art. 2898, 2017, https://doi.org/10.3390/s17122898"
       status: verified
 
 
@@ -134,13 +142,13 @@ battery:
   params:
     density_vol_wh_l:
       value: 400
-      ref: "Assumption in commercial Li-ion range (300-700 Wh/L), conservative for small-format cells. Citable candidate to verify: Schmuch et al., Nat. Energy 2018."
+      ref: "Model assumption — commercial Li-ion volumetric density (~300-700 Wh/L; 400 conservative for small cells). R. Schmuch et al., 'Performance and cost of materials for lithium-based rechargeable automotive batteries,' Nat. Energy, vol. 3, pp. 267-278, 2018, https://doi.org/10.1038/s41560-018-0107-2"
       status: model-assumption
     density_grav_wh_kg:
       value: 230
-      ref: "Assumption in commercial Li-ion range (150-250 Wh/kg). Citable candidate to verify: Schmuch et al., Nat. Energy 2018."
+      ref: "Model assumption — commercial Li-ion gravimetric density (~150-250 Wh/kg). R. Schmuch et al., Nat. Energy, vol. 3, pp. 267-278, 2018, https://doi.org/10.1038/s41560-018-0107-2"
       status: model-assumption
     reference_cr2032_wh:
       value: 0.65
-      ref: "Energizer/Panasonic CR2032 datasheet: 225 mAh @ 3 V = 0.675 Wh nominal; 0.65 Wh used as conservative usable energy."
+      ref: "225 mAh @ 3 V = 0.675 Wh nominal; 0.65 Wh conservative usable. Energizer, 'CR2032 Product Datasheet,' https://data.energizer.com/pdfs/cr2032.pdf"
       status: verified

@@ -5,9 +5,10 @@ SOFTWARE STRUCTURE  (how this file is wired; the HARDWARE diagram is in config.y
    config.yaml ──load_config()──► CFG          (board parameters + refs)
                                     │ _params(section)
                                     ▼
-   Acq(f_Tx, bits, nRx, PRF, D, mode) ──► System   (constructs the boards)
+   Acq(f_Tx, bits, nRx, PRF, D, mode, V_pp, n_cycles) ──► System   (builds boards)
         (the run-time knobs)               │
-                                           ▼  System.walk(acq) runs the signal:
+                                           ▼  System.walk(acq) — Acq passes through
+                                                the boards, each filling its part:
                                                 Pulse.configure → duty
                                                 Core.acquire    → fs, N
                                                 Core.compute    → data_rate
@@ -18,10 +19,17 @@ SOFTWARE STRUCTURE  (how this file is wired; the HARDWARE diagram is in config.y
                                                P, P_avg, fits_ble, fits_onchip,
                                                within_hw, fom, axial_res_mm
 
-Each board (StandardPulser, EnvelopeAFE, STM32DualADC, BLELink, LiIonBattery) is
-a plain class with a few short methods — read any one to see the pattern. System
-names the board for each slot; swap one by changing its class there. Transducer,
-Radio, Battery are modeled but are NOT ModulUS boards.
+SCOPE — this is a first-order POWER / DATA-RATE / FEASIBILITY model. For a given
+configuration it estimates: sampling (fs, N), data rate, average power per board,
+battery size, axial resolution, and whether the design fits the on-chip ADC and
+the wireless link. It does NOT simulate the ultrasound signal, image, beamforming,
+SNR, or circuit-level electronics. (synth_rf_envelope / load_traces below are demo
+traces for the notebook, not part of this model.)
+
+Each board (StandardPulser, EnvelopeAFE, STM32DualADC, BLELink, LiIonBattery) is a
+plain class with a few short methods — read any one to see the pattern. System
+names each board's class; swap one by changing its class there. Transducer, Radio,
+Battery are modeled but are NOT ModulUS boards.
 """
 from pathlib import Path
 import numpy as np
@@ -46,15 +54,17 @@ C_SOUND  = _v(CFG["physics"]["speed_of_sound_ms"])   # m/s soft-tissue speed of 
 N_CYCLES = _v(CFG["physics"]["pulse_cycles"])        # excitation pulse length
 
 
-# ── Acquisition context: state filled as the signal walks the stack ───────
+# ── Acquisition context (Acq): fields filled as it passes through the boards
 class Acq:
-    def __init__(self, f_Tx, bits, nRx, PRF, D, mode):
+    def __init__(self, f_Tx, bits, nRx, PRF, D, mode, V_pp=15.0, n_cycles=N_CYCLES):
         self.f_Tx = f_Tx            # transducer centre frequency [Hz]
         self.bits = bits            # ADC resolution [bits]
         self.nRx = nRx              # parallel Rx channels
         self.PRF = PRF              # pulse repetition frequency [Hz]
         self.D = D                  # imaging depth [m]
         self.mode = mode            # 'RF' | 'BWR' | 'features'
+        self.V_pp = V_pp            # excitation voltage [Vpp]; default 15 V (ModulUS)
+        self.n_cycles = n_cycles    # excitation pulse length [cycles]; default 5
         self.fs = 0.0               # filled by Core.acquire
         self.N = 0.0                # filled by Core.acquire
         self.duty = 0.0             # filled by Pulse.configure
@@ -67,29 +77,33 @@ class Acq:
 
 # ── External front: the transducer (sets resolution, the source) ──────────
 class Transducer:
-    def __init__(self, n_cycles=N_CYCLES):
-        self.n_cycles = n_cycles
-
-    def axial_res(self, f_Tx):
+    def axial_res(self, f_Tx, n_cycles=N_CYCLES):
         lam = C_SOUND / f_Tx             # wavelength [m]
-        return self.n_cycles * lam / 2.0 # half the spatial pulse length [m]
+        return n_cycles * lam / 2.0      # half the spatial pulse length [m]
 
 
-# ── Pulse boards (slot 'pulse') — send the pulse ──────────────────────────
+# ── Pulse board — send the pulse ──────────────────────────────────────────
 class StandardPulser:
-    """Pulse board: STHVUP32 pulser + T/R switch."""
-    def __init__(self, channels_exposed=8, power_w=1e-3):
+    """Pulse board: a generic multi-channel HV pulser + T/R switch. Power per
+    active channel = chip dissipation (generic, low-power class) + transmit
+    (charging the transducer capacitance each cycle)."""
+    def __init__(self, channels_exposed=8, power_per_channel_w=0.1e-3,
+                 transducer_capacitance_f=1e-9):
         self.channels_exposed = channels_exposed
-        self.power_w = power_w
+        self.power_per_channel_w = power_per_channel_w
+        self.transducer_capacitance_f = transducer_capacitance_f
 
     def configure(self, acq):
         acq.duty = acq.t_acq * acq.PRF   # active fraction
 
     def power(self, acq):
-        return self.power_w              # low-duty Tx; ~constant first order
+        # per active channel: chip dissipation + transmit (charge the cap each cycle)
+        #   transmit ~ C * Vpp^2 * n_cycles * PRF
+        p_tx = self.transducer_capacitance_f * acq.V_pp ** 2 * acq.n_cycles * acq.PRF
+        return acq.nRx * (self.power_per_channel_w + p_tx)
 
 
-# ── AFE boards (slot 'echo') — condition the echo ─────────────────────────
+# ── AFE board — condition the echo ────────────────────────────────────────
 class EnvelopeAFE:
     """AFE board: envelope detector (cuts the effective bandwidth ~4x)."""
     def __init__(self, bandwidth_reduction=4, power_bias_w=4e-3, power_active_w=3e-3):
@@ -104,7 +118,7 @@ class EnvelopeAFE:
         return self.power_bias_w + self.power_active_w * acq.duty * acq.nRx
 
 
-# ── Core boards (slot 'core') — digitize, sequence, compute ───────────────
+# ── Core board — digitize, sequence, compute ──────────────────────────────
 class STM32DualADC:
     """Core board: STM32L496 + dual 5 Msps 12-bit on-chip ADC."""
     def __init__(self, adc_nyquist_factor=2, adc_fs_max_hz=5e6, adc_fom_j=50e-15,
@@ -134,7 +148,7 @@ class STM32DualADC:
         return p_adc + p_mcu
 
 
-# ── Wireless link (slot 'radio') — downstream, NOT a ModulUS board ────────
+# ── Wireless link — downstream, NOT a ModulUS board ───────────────────────
 class BLELink:
     """Wireless link: Bluetooth Low Energy."""
     def __init__(self, energy_per_bit_j=20e-9, throughput_max_bps=1e6):
@@ -148,7 +162,7 @@ class BLELink:
         return acq.data_rate * self.energy_per_bit_j
 
 
-# ── Battery (slot 'battery') — external power source ──────────────────────
+# ── Battery — external power source ───────────────────────────────────────
 class LiIonBattery:
     """Battery: sizes the wearable from the average power."""
     def __init__(self, density_vol_wh_l=400.0, density_grav_wh_kg=230.0,
@@ -173,10 +187,10 @@ def fom_mw_per_mhz(P_mW, nRx, f_Tx):     # paper FoM: avg power / Rx ch / f_Tx
     return P_mW / nRx / (f_Tx / 1e6)
 
 
-# ── Motherboard = System: build the boards from config, walk the spine ────
+# ── Motherboard = System: construct the boards, then pass Acq through them ─
 class System:
     """The Motherboard. Constructs each board from its config params; walk()
-    runs the signal down the stack. Swap a board by changing its class here."""
+    passes the Acq through the boards. Swap a board by changing its class here."""
 
     def __init__(self):
         self.transducer = Transducer()
@@ -186,7 +200,7 @@ class System:
         self.radio   = BLELink(**_params("radio"))
         self.battery = LiIonBattery(**_params("battery"))
 
-    def walk(self, acq):                 # signal flows down the board stack
+    def walk(self, acq):                 # Acq passes through the boards (signal-chain order)
         self.pulse.configure(acq)        # -> duty
         fits_adc = self.core.acquire(acq, self.echo)   # -> fs, N
         self.core.compute(acq)           # -> data_rate
@@ -196,7 +210,7 @@ class System:
              "Radio": self.radio.power(acq)}
         P_avg = sum(P.values())
         return dict(acq=acq, P=P, P_avg=P_avg,
-                    axial_res_mm=self.transducer.axial_res(acq.f_Tx) * 1e3,
+                    axial_res_mm=self.transducer.axial_res(acq.f_Tx, acq.n_cycles) * 1e3,
                     fits_onchip=fits_adc,
                     fits_ble=self.radio.fits(acq),
                     within_hw=acq.nRx <= self.pulse.channels_exposed,
