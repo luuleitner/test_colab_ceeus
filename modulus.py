@@ -2,7 +2,7 @@
 
 Hardware module          -> software twin
   Motherboard (base)     -> System    interconnect / composition root
-  Ping  (pulser + T/R)   -> Ping      send the pulse        (8 ch exposed)
+  Pulse (pulser + T/R)   -> Pulse     send the pulse        (8 ch exposed)
   Echo  (AFE envelope)   -> Echo      catch the echo        (RF passthru | envelope)
   Core  (STM32 + 2x ADC) -> Core      digitize, sequence, compute
 
@@ -16,34 +16,62 @@ Research-tier: lean, modular, constants up top, type hints only at edges.
 Provenance flags:  OK solid · ~ cite TBD · # datasheet/measure
 """
 from dataclasses import dataclass
+from pathlib import Path
 import numpy as np
+import yaml
 
-# ── Constants ────────────────────────────────────────────────────────────
-C_SOUND    = 1540.0    # m/s    soft-tissue speed of sound        OK [ModulUS paper]
-N_CYCLES   = 5         # -      excitation pulse length            OK [ModulUS exp.]
-K_NYQUIST  = 2         # -      RF Nyquist factor: fs_RF = 2*f_Tx  OK
-BWR_FACTOR = 4         # -      envelope bandwidth reduction       OK [20->5 Msps; 2.9->0.7 MHz]
-N_CH_MAX   = 8         # -      channels exposed by ModulUS        OK [STHVUP32, 8 of 32]
-N_FEATURES = 16        # -      features-mode payload per A-line   #
 
-ADC_FOM    = 50e-15    # J/conv-step  Walden ADC FoM              ~
-FS_ONCHIP  = 5e6       # samp/s  STM32L496 on-chip ADC ceiling    # [ST datasheet]
+def load_config(path=None):
+    """Load the ModulUS system definition from config.yaml (the twin's spec)."""
+    path = Path(path) if path else Path(__file__).with_name("config.yaml")
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
-E_BIT      = 20e-9     # J/bit  effective BLE energy (EXTERNAL)   ~ literature
-R_BLE_MAX  = 1e6       # bit/s  usable BLE throughput (EXTERNAL)  ~ literature
 
-RHO_VOL    = 400.0     # Wh/L   Li-ion volumetric density         ~
-RHO_GRAV   = 230.0     # Wh/kg  Li-ion gravimetric density        ~
-CR2032_WH  = 0.65      # Wh     reference coin cell               #
+def _v(leaf):
+    """Value of a config leaf: a {value, ref} mapping, or a bare scalar."""
+    return leaf["value"] if isinstance(leaf, dict) and "value" in leaf else leaf
 
-# Generic in-sandbox STATIC power budget (~20 mW total). A round, defensible
-# baseline for the exercise -- deliberately NOT tied to a specific platform.
-# Split keeps the narrative: Tx is cheap, the MCU is the always-on floor.
-P_PING     = 1e-3      # W  Tx pulser housekeeping (low duty)     #
-P_ECHO     = 4e-3      # W  always-on analog AFE bias             #
-P_CORE     = 15e-3     # W  MCU + ADC ref + housekeeping (floor)  #
-P_ECHO_DYN = 3e-3      # W  AFE active, duty-scaled (small)       #
-P_FEAT     = 2e-3      # W  extra MCU draw in features mode       #
+
+def config_references(cfg=None):
+    """Flatten the config into (param, value, ref, status) rows for provenance."""
+    cfg = cfg or CFG
+    rows = []
+    for board, params in cfg.items():
+        if not isinstance(params, dict):
+            continue
+        for name, leaf in params.items():
+            ref = leaf.get("ref", "") if isinstance(leaf, dict) else ""
+            status = leaf.get("status", "") if isinstance(leaf, dict) else ""
+            rows.append((f"{board}.{name}", _v(leaf), ref, status))
+    return rows
+
+
+# ── Constants: loaded from config.yaml (value + ref per entry) ───────────
+CFG = load_config()
+_phys, _pulse, _echo = CFG["physics"], CFG["pulse"], CFG["echo"]
+_core, _radio, _batt = CFG["core"], CFG["radio"], CFG["battery"]
+
+C_SOUND    = _v(_phys["speed_of_sound_ms"])   # m/s    soft-tissue speed of sound
+N_CYCLES   = _v(_phys["pulse_cycles"])        # excitation pulse length
+K_NYQUIST  = _v(_core["adc_nyquist_factor"])  # fs_RF = K_NYQUIST * f_Tx
+BWR_FACTOR = _v(_echo["bandwidth_reduction"]) # envelope bandwidth reduction
+N_CH_MAX   = _v(_pulse["channels_exposed"])   # channels exposed by ModulUS
+N_FEATURES = _v(_core["feature_count"])       # features-mode payload / A-line
+
+ADC_FOM    = _v(_core["adc_fom_j"])           # Walden ADC FoM [J/conv-step]
+FS_ONCHIP  = _v(_core["adc_fs_max_hz"])       # on-chip ADC ceiling [samp/s]
+E_BIT      = _v(_radio["energy_per_bit_j"])   # effective BLE energy [J/bit]
+R_BLE_MAX  = _v(_radio["throughput_max_bps"]) # usable BLE throughput [bit/s]
+RHO_VOL    = _v(_batt["density_vol_wh_l"])    # Li-ion volumetric density [Wh/L]
+RHO_GRAV   = _v(_batt["density_grav_wh_kg"])  # Li-ion gravimetric density [Wh/kg]
+CR2032_WH  = _v(_batt["reference_cr2032_wh"]) # reference coin cell [Wh]
+
+P_PULSE    = _v(_pulse["power_w"])            # Tx pulser housekeeping [W]
+P_ECHO     = _v(_echo["power_bias_w"])        # always-on analog AFE bias [W]
+P_CORE     = _v(_core["power_idle_w"])        # MCU + housekeeping floor [W]
+P_ECHO_DYN = _v(_echo["power_active_w"])      # AFE active, duty-scaled [W]
+P_FEAT     = _v(_core["power_feature_w"])     # extra MCU draw in features mode [W]
 
 
 # ── Acquisition context: state filled as the signal walks the stack ───────
@@ -52,7 +80,7 @@ class Acq:
     f_Tx: float; bits: int; nRx: int; PRF: float; D: float; mode: str
     fs: float = 0.0          # filled by Core.acquire
     N: float = 0.0           # filled by Core.acquire
-    duty: float = 0.0        # filled by Ping.configure
+    duty: float = 0.0        # filled by Pulse.configure
     data_rate: float = 0.0   # filled by Core.compute
 
     @property
@@ -70,10 +98,10 @@ class Transducer:
         return self.n_cycles * lam / 2.0 # half the spatial pulse length [m]
 
 
-# ── Ping = pulser board (STHVUP32 + T/R switch): send the pulse ───────────
+# ── Pulse = pulser board (STHVUP32 + T/R switch): send the pulse ──────────
 @dataclass
-class Ping:
-    p_pulser: float = P_PING             # W  generic, low-duty Tx
+class Pulse:
+    p_pulser: float = P_PULSE            # W  generic, low-duty Tx
     n_ch_max: int = N_CH_MAX
 
     def configure(self, acq):
@@ -163,14 +191,14 @@ class System:
 
     def __init__(self):
         self.transducer = Transducer()
-        self.ping, self.echo, self.core = Ping(), Echo(), Core()
+        self.pulse, self.echo, self.core = Pulse(), Echo(), Core()
         self.radio, self.battery = Radio(), Battery()
 
     def walk(self, acq):                 # signal flows down the board stack
-        self.ping.configure(acq)         # -> duty
+        self.pulse.configure(acq)        # -> duty
         fits_adc = self.core.acquire(acq, self.echo)   # -> fs, N
         self.core.compute(acq)           # -> data_rate
-        P = {"Ping":  self.ping.power(acq),
+        P = {"Pulse": self.pulse.power(acq),
              "Echo":  self.echo.power(acq),
              "Core":  self.core.power(acq),
              "Radio": self.radio.power(acq)}

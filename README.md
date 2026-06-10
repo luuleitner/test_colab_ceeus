@@ -32,7 +32,8 @@ jupyter lab ceeus2026_modulus_power.ipynb
 |---|---|
 | `ceeus2026_modulus_power.ipynb` | the guided exercise (Acts 1–3), with TODO cells |
 | `ceeus2026_modulus_power_solutions.ipynb` | the same, with TODOs filled in (instructor / reference) |
-| `modulus.py` | the ModulUS digital twin (Ping / Echo / Core / System + Transducer, Radio, Battery) |
+| `modulus.py` | the ModulUS digital twin (Pulse / Echo / Core / System + Transducer, Radio, Battery) |
+| `config.yaml` | the ModulUS system spec — every value with a reference; edit to model a different system |
 | `requirements.txt` | dependencies (all pre-installed on Colab) |
 
 The notebook also imports the [dasIT](https://github.com/luuleitner/dasIT) toolbox for

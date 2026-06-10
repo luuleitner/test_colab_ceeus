@@ -6,6 +6,7 @@
 numpy>=1.26
 scipy>=1.11          # scipy.signal.hilbert / welch for the envelope + spectra
 matplotlib>=3.9      # 3.9 is the first release with NumPy 2.x-compatible wheels
+pyyaml>=6.0          # read config.yaml (the ModulUS system spec)
 
 # --- interactive notebook (the guided slider exploration) ---
 ipywidgets>=8.0
