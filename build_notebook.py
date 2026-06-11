@@ -49,7 +49,7 @@ echo → frequency → sampling → data rate → power → battery → wearable
 └─ Exercise 1 ─┘   └─ Exercise 2 ─────┘   └─ Exercise 3 ───────────┘
 ```
 1. ***Exercise 1***: read one real ModulUS echo as **RF** and as **envelope**, and find the frequency it carries.
-2. ***Exercise 2***: digitize that echo, compute its **data rate**, and watch it slam into the **on-chip ADC** and **wireless-link** walls.
+2. ***Exercise 2***: digitize that echo, compute its **data rate**, and watch it slam into the **on-chip ADC** and **wireless-link** bottlenecks.
 3. ***Exercise 3***: weigh what to transmit (**RF**, **envelope**, or **on-device features**) to bring **power** and **battery** within a **small wearable's budget** — and settle on a **receive-channel count it can sustain**.
 """))
 
@@ -190,6 +190,7 @@ $$ \\text{axial\\_res} = n_\\text{cycles}\\cdot\\frac{\\lambda}{2}, \\qquad \\la
 
 So higher $f_\\text{Tx}$ → shorter $\\lambda$ → finer detail. The catch, waiting in **Exercise 2**: finer detail is **more data**.
 
+
 | $f_\\text{Tx}$ | $\\lambda$ | axial res (5 cyc) | resolves about |
 |---|---|---|---|
 | 1 MHz  | 1.54 mm  | 3.9 mm  | a grape |
@@ -211,24 +212,28 @@ for f in (1e6, 5e6, 10e6, 15e6):
 CELLS.append(md("""\
 ## Exercise 2 · The cost — *digitizing and moving the echo*
 
-A clean echo is worthless until you can get it off the probe. Digitizing it sets the **data rate** — and in a wearable, that data rate is a firehose aimed at a drinking straw. Start with **Nyquist**: to capture a signal you must sample at least twice its top frequency.
+A clean echo is worthless until you can get it off the probe. Digitizing it sets the **data rate** — and in a wearable, that data rate is a firehose aimed at a drinking straw. Start with **Nyquist**: to capture a signal you must sample at least twice its highest frequency.
 
 ```
-fs        = 2 · f_Tx                 (RF, full bandwidth)
+fs        = 2 · f_Tx                 (RF, ~2× the centre frequency)
 t_acq     = 2 · D / c                (round trip to depth D)
 N         = fs · t_acq               (samples per A-line)
 data_rate = N · bits · PRF · nRx     (bits per second)   ← the number that matters
 ```
 
-Between that firehose and the wearable stand two hard walls:
+An **A-line** is one pulse-echo trace — one transmit and the echoes it returns; `N` is how
+many samples that trace holds. (We take the centre frequency `f_Tx` as the band edge — a
+first-order simplification; a real RF front-end oversamples, ≳4·f_Tx.)
 
-| wall | limit | cross it and... |
+Between that firehose and the wearable stand two hard bottlenecks:
+
+| bottleneck | limit | cross it and... |
 |---|---|---|
-| **ADC wall** | on-chip ADC ~ **5 Msps** | you need an external converter + FPGA (bigger, hungrier) |
-| **link wall** | usable BLE ~ **300 kb/s** | the stream will not fit the radio — the straw |
+| **ADC bottleneck** | on-chip ADC ~ **5 Msps** | you need an external converter + FPGA (bigger, hungrier) |
+| **link bottleneck** | usable BLE ~ **300 kb/s** | the stream will not fit the radio — the straw |
 
 The analog **Echo** board (envelope) already cut bandwidth ~4× in Exercise 1, dropping fs to
-5 Msps — just under the ADC wall. But does it clear the **link** wall? Compute it and see.
+5 Msps — just under the ADC bottleneck. But does it clear the **link** bottleneck? Compute it and see.
 """))
 
 CELLS.append(code("""\
@@ -242,31 +247,47 @@ data_rate = ...              # <-- replace ... using d.N, acq.bits, acq.PRF, acq
 # ---- self-check (do not edit) -------------------------------------------
 assert data_rate is not ..., "fill in data_rate above"
 assert abs(data_rate - d.data_rate) < 1, "should match the model (Core.data_rate)"
-wall = device.radio.throughput_max_bps
+bottleneck = device.radio.throughput_max_bps
 print(f"RF, 8 channels, 100 Hz  ->  {data_rate/1e6:.2f} Mb/s")
-print(f"BLE ceiling {wall/1e3:.0f} kb/s   ->  {data_rate/wall:.0f}x OVER the wall" if data_rate > wall else "fits")
+print(f"BLE bottleneck {bottleneck/1e3:.0f} kb/s   ->  {data_rate/bottleneck:.0f}x OVER it" if data_rate > bottleneck else "fits")
 print("OK - data-rate check passed")
 """))
 
 CELLS.append(code("""\
 # The naive choice (RF) vs the analog trick (BWR envelope) — same 10 MHz, 8 ch, 100 Hz.
 device = System()
-print(f"{'mode':9s}{'fs':>9s}{'data rate':>12s}   ADC wall   BLE wall")
+print(f"{'mode':9s}{'fs':>9s}{'data rate':>12s}     ADC       BLE")
 for mode in ("RF", "BWR"):
     d = device.run(Acq(10e6, 12, 8, 100, 0.03, mode))
     print(f"{mode:9s}{d.fs/1e6:7.1f}M {d.data_rate/1e6:9.2f} Mb/s   "
           f"{'fits ' if d.fits_onchip else ' EXT ':>5s}     "
           f"{'fits' if d.fits_ble else 'OVER'}")
 print()
-print("The Echo board fixed the ADC wall (envelope -> 5 Msps). The radio is still flooded.")
+print("The Echo board fixed the ADC bottleneck (envelope -> 5 Msps). The radio is still flooded.")
+"""))
+
+CELLS.append(md("""\
+### Stage 1 — beat the pipe (locked in RF)
+
+You're locked in **RF**: every sample ships raw. Your job — get the data rate under the
+~300 kb/s BLE pipe using the knobs below. Each sharpens the image a different way, and
+each costs:
+
+| knob | turn it up for | like… | what it costs |
+|---|---|---|---|
+| **nRx** — receive channels | spatial coverage, lateral sharpness | more microphones at a concert | each channel is another stream to power *and* send — linear in both |
+| **f_Tx** — centre frequency | finer axial detail (smaller things) | a higher-megapixel camera | double the frequency → double the samples → a bigger file every pulse |
+| **PRF** — pulses per second | faster motion, Doppler | filming at 1000 fps vs 25 | more frames = more data, less idle time for the radio and chip to sleep |
+
+There's also a **battery** slider. Try everything — including making the battery bigger.
 """))
 
 CELLS.append(code("""\
-# STAGE 1 — you are LOCKED in RF mode. Try to get the data rate under the BLE wall
+# STAGE 1 — you are LOCKED in RF mode. Try to get the data rate under the BLE bottleneck
 # by changing anything you like... including the battery. (Drag the sliders.)
 from ipywidgets import interact, FloatSlider, IntSlider, Dropdown
 device = System()
-WALL = device.radio.throughput_max_bps / 1e6     # BLE wall [Mb/s], read from the model
+BOTTLENECK = device.radio.throughput_max_bps / 1e6   # BLE bottleneck [Mb/s], read from the model
 
 def stage1(f_Tx_MHz=10.0, nRx=8, PRF=100, battery_days=1):
     d = device.run(Acq(f_Tx_MHz * 1e6, 12, nRx, PRF, 0.03, "RF"))   # mode LOCKED = RF
@@ -274,8 +295,8 @@ def stage1(f_Tx_MHz=10.0, nRx=8, PRF=100, battery_days=1):
     b = device.battery.size(d.P_avg, days=battery_days)
     plt.figure(figsize=(7, 1.6))
     plt.barh([0], [dr], color=("seagreen" if d.fits_ble else "crimson"))
-    plt.axvline(WALL, color="k", ls="--"); plt.text(WALL * 1.05, 0, f"BLE {WALL*1e3:.0f} kb/s", va="center")
-    plt.yticks([]); plt.xlabel("data rate [Mb/s]"); plt.xlim(0, max(WALL * 2, dr * 1.1))
+    plt.axvline(BOTTLENECK, color="k", ls="--"); plt.text(BOTTLENECK * 1.05, 0, f"BLE {BOTTLENECK*1e3:.0f} kb/s", va="center")
+    plt.yticks([]); plt.xlabel("data rate [Mb/s]"); plt.xlim(0, max(BOTTLENECK * 2, dr * 1.1))
     plt.title(f"{dr:.2f} Mb/s  ->  {'FITS' if d.fits_ble else 'OVER'}      "
               f"battery {battery_days} d = {b['vol_cm3']:.2f} cm3")
     plt.tight_layout(); plt.show()
@@ -288,14 +309,22 @@ interact(stage1,
 """))
 
 CELLS.append(md("""\
-### The battery was never the problem
+### A bigger tank won't widen the pipe
 
-You just felt it: **no battery size changes the BLE verdict.** Locked in RF, the only
-way under the ~300 kb/s line is to throw away resolution (`f_Tx`), coverage (`nRx`), or
-frame rate (`PRF`) — i.e. to stop doing the thing you came to do.
+The battery slider did nothing to the BLE verdict — by design. A battery is a **tank**:
+it stores energy (run-*hours*). The link is a **pipe**: its width is the radio's
+throughput, fixed by the radio, not by your energy store. A bigger tank never widens the
+pipe.
 
-The data rate is set by how you **represent** the signal, not how big a battery you
-carry. In **Exercise 3** we unlock that representation — and watch the wall move.
+They touch only through **power**: pushing more bits/s costs radio power (~19 nJ/bit in
+the model), draining the tank faster — so data and battery are coupled through *power*,
+not the ceiling. (A wider pipe exists — **Wi-Fi**, tens of Mb/s — but it burns 1–2 orders
+of magnitude more power than BLE, far past a coin cell: you'd trade the link bottleneck
+for a power one.)
+
+So the three knobs above buy link-fit only by giving up image quality. **Exercise 3** adds
+the lever that isn't on that list — how you **represent** the echo before it reaches the
+radio.
 """))
 
 # ── EXERCISE 3 · SYSTEM — scaling receive channels ──────────────────────
@@ -317,7 +346,7 @@ per A-line, what you put on the radio:
   features  ▌                  dimensions on a card
 ```
 
-Watch what each does to the **power breakdown**, the **link wall**, and the **battery**
+tWatch what each does to the **power breakdown**, the **link bottleneck**, and the **battery**
 you would have to wear.
 """))
 
@@ -354,7 +383,7 @@ interact(stage2,
 
 CELLS.append(code("""\
 # TODO (c) — even the envelope (BWR) floods the radio once you add channels.
-# Find the SMALLEST nRx at which BWR breaks the BLE wall (10 MHz, PRF=100 Hz).
+# Find the SMALLEST nRx at which BWR breaks the BLE bottleneck (10 MHz, PRF=100 Hz).
 device = System()
 breaking_nRx = None
 for nRx in [1, 2, 4, 8, 16, 32]:
@@ -365,7 +394,7 @@ for nRx in [1, 2, 4, 8, 16, 32]:
 
 # ---- self-check (do not edit) -------------------------------------------
 assert breaking_nRx is not None, "fill in the condition above"
-print(f"BWR breaks the BLE wall at nRx = {breaking_nRx} channels")
+print(f"BWR breaks the BLE bottleneck at nRx = {breaking_nRx} channels")
 print("Your escape from there? -> features mode: ship numbers, not the waveform.")
 """))
 
@@ -403,7 +432,7 @@ forward (the cost):    resolution → frequency → Nyquist → data → power �
 inverse (the design):  wearable → battery → power → data → ... → architecture
 ```
 
-**Three escape routes from the link wall**
+**Three escape routes from the link bottleneck**
 
 | route | what it buys | what it costs |
 |---|---|---|
