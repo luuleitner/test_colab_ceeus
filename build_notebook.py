@@ -1,6 +1,6 @@
 """Builder for the CEEUS 2026 workshop Colab notebook (notebook-as-code).
 
-Run:  py -3.12 dev_material/build_notebook.py
+Run:  py -3.12 build_notebook.py
 Output: 2026ceeus_student.ipynb + 2026ceeus_teacher.ipynb at the repo root.
 
 Cells are appended in order; extend CELLS as we build act by act. Keeping the
@@ -13,7 +13,7 @@ SLUG = "luuleitner/test_colab_ceeus"             # GitHub slug (Colab mirror)
 NB_NAME = "2026ceeus_student.ipynb"              # student version (TODO blanks)
 NB_TEACHER = "2026ceeus_teacher.ipynb"           # teacher version (blanks filled)
 RAW = f"https://raw.githubusercontent.com/{SLUG}/main"   # raw base for assets/ images
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parent
 
 nb = nbf.v4.new_notebook()
 md = nbf.v4.new_markdown_cell
@@ -23,27 +23,34 @@ CELLS = []
 # ── C0 · front matter ────────────────────────────────────────────────────
 CELLS.append(md(f"""\
 # Anatomy of a Wearable Ultrasound System
-#### From Components to Signals
-**IEEE CEEUS 2026 · Wearables Workshop** — Tue 23 Jun, 14:00–15:20 (80 min)  ·  **Dr. Christoph Leitner**, ETH Zurich (CH)
-<p align="left"><img src="{RAW}/assets/modulUS.jpg" width="520" alt="The ModulUS wearable-ultrasound platform"></p>
+
+### From Components to Signals
+#### *Marco Giordano and Dr. Christoph Leitner (ETH Zurich, Switzerland)*
+
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{SLUG}/blob/main/{NB_NAME})
 
-This workshop dissects a wearable ultrasound system from front-end components to digitized signals — to expose **where energy is actually spent, and for what**. We pair a live acquisition on the **ModulUS** sandbox with a hands-on look at the recorded RF and envelope data, and see **why receive-channel scaling must be approached carefully** in wearable ultrasound. 
+<p align="left"><img src="{RAW}/assets/modulUS.jpg" width="520" alt="The ModulUS wearable-ultrasound platform"></p>
 
+A wearable ultrasound system must do the job of a cart-sized scanner, but using only a patch on the skin, powered by a battery small enough to wear. 
+<br> This workshop takes a wearable ultrasound system apart, from front-end components to the digitized signal, to expose **where the energy actually goes, and for what**.
+```
+size you start from ──────────────────────────► size you design toward
+   cart scanner            handheld probe            wearable patch
+   ~200 L                     ~200 mL                  ~3 mL
+   ≈ a bathtub                ≈ a coffee mug           ≈ a teaspoon
+        └─────────  same job, a bathtub poured into a teaspoon (~70,000×)  ─────────┘
+```
+<br>We run a live acquisition on our **ModulUS** system (a sandbox for wearable-ultrasound development). You then take a hands-on look at the recorded RF and envelope data.
+<br>Using that data, you analyse **why receive-channel scaling must be approached carefully** in wearable ultrasound, and what impact excitation frequency has beyond improved resolution.
 
 #### What you will do
-- read one real ModulUS echo as **RF** and as **envelope**, and see what each costs to store and send;
-- estimate a configuration's **data rate** and **average power** from first principles;
-- locate where a design hits the **on-chip ADC** limit and the **wireless-link** limit;
-- compare **RF / envelope / on-device features** for getting data off the probe;
-- choose a **receive-channel count** a wrist battery can actually sustain.
-
-#### The path — from echo to wearable
 ```
 echo → frequency → sampling → data rate → power → battery → wearable
+└─ Exercise 1 ─┘   └─ Exercise 2 ─────┘   └─ Exercise 3 ───────────┘
 ```
-in three parts — **the signal** (what the front-end produces) · **the cost**
-(digitizing and moving it) · **the system** (scaling receive channels).
+1. ***Exercise 1***: read one real ModulUS echo as **RF** and as **envelope**, and find the frequency it carries.
+2. ***Exercise 2***: digitize that echo, compute its **data rate**, and watch it slam into the **on-chip ADC** and **wireless-link** walls.
+3. ***Exercise 3***: weigh what to transmit (**RF**, **envelope**, or **on-device features**) to bring **power** and **battery** within a **small wearable's budget** — and settle on a **receive-channel count it can sustain**.
 """))
 
 # ── C1 · bootstrap (robust on Colab, also runs locally) ──────────────────
@@ -81,18 +88,42 @@ from dasIT.features.signal import fftsignal, analytic_signal, envelope
 print("ready —", "Colab" if IN_COLAB else "local")
 """))
 
-# ── PART 1 · SIGNAL — the recorded echo ──────────────────────────────────
+# ── C2 · tools & repositories ────────────────────────────────────────────
+CELLS.append(md(f"""\
+### Tools & repositories
+
+This notebook stands on two pieces, both pulled in by the bootstrap above:
+
+| what | role here | link |
+|---|---|---|
+| **dasIT** | signal toolbox — spectra, analytic signal, envelope (`fftsignal`, `analytic_signal`, `envelope`) | [github.com/luuleitner/dasIT](https://github.com/luuleitner/dasIT) |
+| **ModulUS sandbox** (this repo) | the system digital-twin you design against — `System`, `Acq`, `modulus.py`, and the demo echo in `example_data/` | [github.com/{SLUG}](https://github.com/{SLUG}) |
+
+Everything runs on Colab as-is — nothing to install by hand. The full method is in the ModulUS paper (see **References** at the end).
+"""))
+
+# ── EXERCISE 1 · SIGNAL — the recorded echo ──────────────────────────────
 CELLS.append(md("""\
-## Part 1 · The signal — *what the front-end produces*
+## Exercise 1 · The signal — *what the front-end produces*
 
-A wearable probe sends a short **pulse** (a few cycles) and listens for **echoes**.
-ModulUS exposes two views of the *same* echo:
+Ultrasound is an echo game. The probe sends a short **pulse** (a few cycles of sound) then listens for what bounces back from each tissue boundary. The later an echo arrives, the deeper the reflector that made it.
 
-- **RF** — the raw radio-frequency waveform off the transducer (Pulse → Core).
-- **Envelope** — the RF after the analog **Echo** board strips the carrier, keeping the echo's shape.
+```
+        pulse out  ∿∿►
+ ┌────┐ ───────────────────────────────────────────►
+ │ Tx │           ║          ║                ║
+ │ Rx │ ◄───────────────────────────────────────────
+ └────┘  echoes in  ∿         ∿∿               ∿
+                   skin     muscle            bone
+ t = 0 ───────────────────────────────────────────►  time  (depth = c·t / 2)
+```
 
-Both tell you *where* the reflectors are. They differ in **bandwidth** — and that
-difference is the lever this whole sandbox turns on. Let's look at one real measurement.
+ModulUS hands you the *same* echo in two forms:
+
+- **RF** — the raw radio-frequency waveform straight off the transducer (Pulse → Core), carrier and all.
+- **Envelope** — that same RF after the analog **Echo** board strips the carrier, leaving only the echo's shape.
+
+Both place the reflectors at the same depth. What sets them apart is **bandwidth** — and that single difference is the lever the rest of this notebook turns on. Open one real measurement and look.
 """))
 
 CELLS.append(code("""\
@@ -145,12 +176,19 @@ print("OK - spectral check passed")
 CELLS.append(md("""\
 ### Resolution — what can this pulse *resolve*?
 
-Bandwidth set the data cost; the transducer **frequency** sets the *spatial* resolution.
+Exercise 1 paid for bandwidth in data; the transducer **frequency** buys something back — **spatial resolution**. A shorter pulse (higher frequency) splits two reflectors that a long pulse smears into one:
+
+```
+ two reflectors a hair apart:   ║║
+   low  f  (long pulse):   ∿∿∿∿∿∿   →  one blob    (can't separate them)
+   high f  (short pulse):  ∿∿  ∿∿   →  two echoes  (resolved)
+```
+
 Axial resolution is about half the spatial pulse length:
 
 $$ \\text{axial\\_res} = n_\\text{cycles}\\cdot\\frac{\\lambda}{2}, \\qquad \\lambda = \\frac{c}{f_\\text{Tx}}, \\qquad c = 1540\\ \\text{m/s} $$
 
-Higher $f_\\text{Tx}$ → shorter $\\lambda$ → finer detail — but (Part 2) more data.
+So higher $f_\\text{Tx}$ → shorter $\\lambda$ → finer detail. The catch, waiting in **Exercise 2**: finer detail is **more data**.
 
 | $f_\\text{Tx}$ | $\\lambda$ | axial res (5 cyc) | resolves about |
 |---|---|---|---|
@@ -159,7 +197,6 @@ Higher $f_\\text{Tx}$ → shorter $\\lambda$ → finer detail — but (Part 2) m
 | 10 MHz | 0.154 mm | 0.38 mm | a human hair (~0.07 mm) |
 | 15 MHz | 0.103 mm | 0.26 mm | a dust mite |
 
-*(GHz acoustic microscopy reaches a single cell ~10 µm — off our chart.)*
 """))
 
 CELLS.append(code("""\
@@ -170,12 +207,11 @@ for f in (1e6, 5e6, 10e6, 15e6):
     print(f"   {f/1e6:>5.0f}        {Transducer().axial_res(f)*1e3:.2f}")
 """))
 
-# ── PART 2 · COST — digitize and move the echo ──────────────────────────
+# ── EXERCISE 2 · COST — digitize and move the echo ──────────────────────
 CELLS.append(md("""\
-## Part 2 · The cost — *digitizing and moving the echo*
+## Exercise 2 · The cost — *digitizing and moving the echo*
 
-To digitize the echo you must sample it. **Nyquist**: the sample rate must be at
-least twice the signal's top frequency.
+A clean echo is worthless until you can get it off the probe. Digitizing it sets the **data rate** — and in a wearable, that data rate is a firehose aimed at a drinking straw. Start with **Nyquist**: to capture a signal you must sample at least twice its top frequency.
 
 ```
 fs        = 2 · f_Tx                 (RF, full bandwidth)
@@ -184,15 +220,15 @@ N         = fs · t_acq               (samples per A-line)
 data_rate = N · bits · PRF · nRx     (bits per second)   ← the number that matters
 ```
 
-Two hard ceilings stand in the way:
+Between that firehose and the wearable stand two hard walls:
 
 | wall | limit | cross it and... |
 |---|---|---|
 | **ADC wall** | on-chip ADC ~ **5 Msps** | you need an external converter + FPGA (bigger, hungrier) |
-| **link wall** | usable BLE ~ **300 kb/s** | the data does not fit the radio |
+| **link wall** | usable BLE ~ **300 kb/s** | the stream will not fit the radio — the straw |
 
-The analog **Echo** board (envelope) cut the bandwidth ~4× in Part 1 → fs drops to
-5 Msps, slipping under the ADC wall. But does it clear the **link** wall? Compute it.
+The analog **Echo** board (envelope) already cut bandwidth ~4× in Exercise 1, dropping fs to
+5 Msps — just under the ADC wall. But does it clear the **link** wall? Compute it and see.
 """))
 
 CELLS.append(code("""\
@@ -259,19 +295,27 @@ way under the ~300 kb/s line is to throw away resolution (`f_Tx`), coverage (`nR
 frame rate (`PRF`) — i.e. to stop doing the thing you came to do.
 
 The data rate is set by how you **represent** the signal, not how big a battery you
-carry. In **Part 3** we unlock that representation — and watch the wall move.
+carry. In **Exercise 3** we unlock that representation — and watch the wall move.
 """))
 
-# ── PART 3 · SYSTEM — scaling receive channels ───────────────────────────
+# ── EXERCISE 3 · SYSTEM — scaling receive channels ──────────────────────
 CELLS.append(md("""\
-## Part 3 · The system — *scaling receive channels*
+## Exercise 3 · The system — *scaling receive channels*
 
 You proved it: in RF the radio floods the link no matter the battery. Now unlock the
-one knob we held back — how the echo is **represented** before it reaches the radio:
+one knob we held back — how the echo is **represented** before it reaches the radio.
+Think of it as how you mail a statue:
 
-- **RF** — ship every sample (the full waveform).
-- **BWR** — ship the analog envelope (~4× fewer samples; keeps resolution, loses phase).
-- **features** — ship a handful of numbers per A-line, not the waveform at all.
+- **RF** — crate up the whole statue: every sample, the full waveform.
+- **BWR** — ship a lightweight cast: the analog envelope, ~4× lighter, shape kept but fine detail (phase) lost.
+- **features** — post its dimensions on a card: a handful of numbers per A-line, no waveform at all.
+
+```
+per A-line, what you put on the radio:
+  RF        ████████████████   the whole statue
+  BWR       ████               a light cast — ~4× less
+  features  ▌                  dimensions on a card
+```
 
 Watch what each does to the **power breakdown**, the **link wall**, and the **battery**
 you would have to wear.
@@ -327,9 +371,9 @@ print("Your escape from there? -> features mode: ship numbers, not the waveform.
 
 CELLS.append(code("""\
 # INVERT THE CHAIN — the design exercise.
-# Given a WRIST budget, which architectures actually survive every constraint:
+# Given a SMALL-WEARABLE budget, which architectures actually survive every constraint:
 # fits BLE  AND  fits on-chip ADC  AND  nRx <= 8 (hardware)  AND  battery <= budget.
-BUDGET_CM3 = 3.0       # a coin-cell-sized wrist budget
+BUDGET_CM3 = 3.0       # a coin-cell-sized wearable budget
 DAYS = 1
 device = System(); survivors = []
 for mode in ("RF", "BWR", "features"):
@@ -343,7 +387,7 @@ for mode in ("RF", "BWR", "features"):
                     survivors.append((mode, f_MHz, nRx, PRF,
                                       d.axial_res_mm, b["vol_cm3"]))
 
-print(f"{len(survivors)} architectures fit a {BUDGET_CM3} cm3 wrist budget for {DAYS} day\\n")
+print(f"{len(survivors)} architectures fit a {BUDGET_CM3} cm3 wearable budget for {DAYS} day\\n")
 print(f"{'mode':9s}{'f_Tx':>6s}{'nRx':>5s}{'PRF':>7s}{'res[mm]':>9s}{'vol[cm3]':>10s}")
 for s in sorted(survivors, key=lambda s: (s[4], s[5]))[:15]:
     print(f"{s[0]:9s}{s[1]:>5d}M{s[2]:>5d}{s[3]:>7d}{s[4]:>9.2f}{s[5]:>10.2f}")
@@ -370,6 +414,15 @@ inverse (the design):  wearable → battery → power → data → ... → archi
 **Still open (the next few years):** multi-channel *low-power* acquisition;
 phase-preserving BWR (I/Q) for Doppler and displacement; ASIC integration
 (→ Costa, Wed); transducer + edge-AI co-design. *This is where your research comes in.*
+"""))
+
+CELLS.append(md("""\
+## References
+
+1. C. Leitner, M. Giordano, M. Tanner, F. Villani, M. Magno and L. Benini,
+   "ModulUS: A Sandbox for High-Resolution Wearable Ultrasound Development,"
+   *2025 IEEE International Ultrasonics Symposium (IUS)*, Utrecht, Netherlands,
+   2025, pp. 1-4, doi: [10.1109/IUS62464.2025.11201551](https://doi.org/10.1109/IUS62464.2025.11201551).
 """))
 
 # ── Emit two notebooks from the same cells: student (blanks) + solutions ──
